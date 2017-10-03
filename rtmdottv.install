@@ -1,0 +1,7 @@
+lib: [
+  "_build/install/default/lib/rtmdottv/META" {"META"}
+  "_build/install/default/lib/rtmdottv/opam" {"opam"}
+]
+bin: [
+  "_build/install/default/bin/RTMDotTV" {"RTMDotTV"}
+]
