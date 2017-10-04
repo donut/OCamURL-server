@@ -1,10 +1,10 @@
 
 open Common
 
-module ID : IntConvertableType = IntConvertable
-module UserAgent : StringConvertableType = StringConvertable
-module IP : StringConvertableType = StringConvertable
-module Timestamp : IntConvertableType = IntConvertable
+module ID : Convertable.IntType = Convertable.Int
+module UserAgent : Convertable.StringType = Convertable.String
+module IP : Convertable.StringType = Convertable.String
+module Timestamp : Convertable.IntType = Convertable.Int
 
 type t = {
   id: ID.t;

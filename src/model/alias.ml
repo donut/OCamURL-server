@@ -1,7 +1,7 @@
 
 open Common
 
-module Name : StringConvertableType = StringConvertable
+module Name : Convertable.StringType = Convertable.String
 
 type t = {
   name: Name.t;

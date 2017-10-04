@@ -9,12 +9,12 @@ end = struct
   let to_string = function HTTP -> "http" | HTTPS -> "https"
 end
 
-module ID : IntConvertableType = IntConvertable
-module Username : StringConvertableType = StringConvertable
-module Password : StringConvertableType = StringConvertable
-module Host : StringConvertableType = StringConvertable
-module Port : IntConvertableType = IntConvertable
-module Path : StringConvertableType = StringConvertable
+module ID : Convertable.IntType = Convertable.Int
+module Username : Convertable.StringType = Convertable.String
+module Password : Convertable.StringType = Convertable.String
+module Host : Convertable.StringType = Convertable.String
+module Port : Convertable.IntType = Convertable.Int
+module Path : Convertable.StringType = Convertable.String
 
 type param = { key: string; value: string option; }
 
@@ -28,7 +28,7 @@ end = struct
   let to_list x = x
 end
 
-module Fragment : StringConvertableType = StringConvertable
+module Fragment : Convertable.StringType = Convertable.String
 
 type t = {
   id: ID.t option;

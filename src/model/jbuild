@@ -2,4 +2,4 @@
 
 (library
  ((name model)
-  (libraries (core))))
+  (libraries (common core))))
