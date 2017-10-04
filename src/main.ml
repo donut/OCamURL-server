@@ -8,21 +8,6 @@ open Graphql_lwt
 open Ext_list
 open Model
 
-type alias = {
-  name: string;
-  url: Url.t;
-}
-
-type use = {
-  id: int;
-  alias: alias;
-  url: Url.t;
-  referer: Url.t option;
-  user_agent: string option;
-  ip: string;
-  timestamp: int;
-}
-
 type put_alias_input = {
   name: string;
   url: Url.t;
@@ -30,7 +15,7 @@ type put_alias_input = {
 }
 
 type put_alias_payload = {
-  alias: alias;
+  alias: Alias.t;
   client_mutation_id: string;
 }
 
@@ -65,11 +50,11 @@ let urls = Url.(ref [
   };
 ])
 
-let aliases = ref [
-  { name = "coffee"; url = nth !urls 0 };
-  { name = "nugget"; url = nth !urls 1 };
-  { name = "owl";    url = nth !urls 2 };
-]
+let aliases = Alias.(ref [
+  { name = Name.of_string "coffee"; url = nth !urls 0 };
+  { name = Name.of_string "nugget"; url = nth !urls 1 };
+  { name = Name.of_string "owl";    url = nth !urls 2 };
+])
 
 let url_scheme_values = Url.Scheme.(Schema.([
     enum_value "http" ~value:HTTP;
@@ -149,42 +134,42 @@ let url = Url.(Schema.(obj "URL"
 ))
 
 
-let alias = Schema.(obj "Alias"
+let alias = Alias.(Schema.(obj "Alias"
   ~fields:(fun alias -> [
     field "id"
       ~args:Arg.[]
       ~typ:(non_null guid)
-      ~resolve:(fun () (p:alias) -> p.name)
+      ~resolve:(fun () p -> Name.to_string p.name)
     ;
     field "name"
       ~args:Arg.[]
       ~typ:(non_null string)
-      ~resolve:(fun () (p:alias) -> p.name)
+      ~resolve:(fun () p -> Name.to_string p.name)
     ;
     field "url"
       ~args:Arg.[]
       ~typ:(non_null url)
-      ~resolve:(fun () (p:alias) -> p.url)
+      ~resolve:(fun () p -> p.url)
     ;
   ])
-)
+))
 
-let use = Schema.(obj "Use"
+let use = Use.(Schema.(obj "Use"
   ~fields:(fun use -> [
     field "id"
       ~args:Arg.[]
       ~typ:(non_null guid)
-      ~resolve:(fun () p -> string_of_int p.id)
+      ~resolve:(fun () p -> p.id |> ID.to_int |> string_of_int)
     ;
     field "alias"
       ~args:Arg.[]
       ~typ:(non_null alias)
-      ~resolve:(fun () (p:use) -> p.alias)
+      ~resolve:(fun () p -> p.alias)
     ;
     field "url"
       ~args:Arg.[]
       ~typ:(non_null url)
-      ~resolve:(fun () (p:use) -> p.url)
+      ~resolve:(fun () p-> p.url)
     ;
     field "referer"
       ~args:Arg.[]
@@ -194,20 +179,20 @@ let use = Schema.(obj "Use"
     field "user_agent"
       ~args:Arg.[]
       ~typ:string
-      ~resolve:(fun () p -> p.user_agent)
+      ~resolve:(fun () p -> Option.map p.user_agent UserAgent.to_string)
     ;
     field "ip"
       ~args:Arg.[]
       ~typ:(non_null string)
-      ~resolve:(fun () p -> p.ip)
+      ~resolve:(fun () p -> IP.to_string p.ip)
     ;
     field "timestamp"
       ~args:Arg.[]
       ~typ:(non_null int)
-      ~resolve:(fun () p -> p.timestamp)
+      ~resolve:(fun () p -> Timestamp.to_int p.timestamp)
     ;
   ])
-)
+))
 
 let url_param_input = Schema.Arg.(obj "URLParamInput"
   ~coerce:(fun key value -> Url.({ key; value; }))
@@ -274,12 +259,11 @@ let schema = Schema.(schema [
         arg "alias" ~typ:(non_null string);
       ]
       ~typ:url
-      ~resolve:(fun () () name ->
-        let compare (alias:alias) = alias.name = name in
+      ~resolve:(fun () () name -> Alias.(
+        let compare (alias:t) = (Name.to_string alias.name) = name in
         let alias = find_opt (compare) !aliases in
-        match alias with
-          None -> None | Some alias -> Some alias.url
-      )
+        Option.map alias (fun a -> a.url)
+      ))
   ]
   ~mutations:[
     field "putAlias"
@@ -294,7 +278,7 @@ let schema = Schema.(schema [
         in
         let url' = { url with id = Some (Url.ID.of_int id) } in
         urls := append !urls [url'];
-        let alias = { name; url = url' } in
+        let alias = Alias.({ name = Name.of_string name; url = url' }) in
         aliases := append !aliases [alias];
         { alias; client_mutation_id; }
       )
