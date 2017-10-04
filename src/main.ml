@@ -1,45 +1,23 @@
 
-open Lwt
+open Core
 open Str
-open List
 
+open Lwt
 open Graphql_lwt
 
-let rec last = function
-  | [] -> raise Not_found
-  | [element] -> element
-  | _ :: remainder -> last remainder
-
-let last_opt list = 
-  try Some (last list) with
-    | Not_found -> None
-
-type scheme = HTTP | HTTPS
-let string_of_scheme = function | HTTP -> "http" | HTTPS -> "https"
-type url_param = { key: string; value: string option; }
-
-type url = {
-  id: int option;
-  scheme: scheme;
-  user: string option;
-  password: string option;
-  host: string;
-  port: int option;
-  path: string;
-  params: url_param list option;
-  fragment: string option;
-}
+open Ext_list
+open Model
 
 type alias = {
   name: string;
-  url: url;
+  url: Url.t;
 }
 
 type use = {
   id: int;
   alias: alias;
-  url: url;
-  referer: url option;
+  url: Url.t;
+  referer: Url.t option;
   user_agent: string option;
   ip: string;
   timestamp: int;
@@ -47,7 +25,7 @@ type use = {
 
 type put_alias_input = {
   name: string;
-  url: url;
+  url: Url.t;
   client_mutation_id: string;
 }
 
@@ -56,32 +34,36 @@ type put_alias_payload = {
   client_mutation_id: string;
 }
 
-let urls = ref [
+let urls = Url.(ref [
   {
-    id = Some 1;
+    id = Some (ID.of_int 1);
     scheme = HTTP;
     user = None; password = None;
-    host = "www.rtm.tv"; port = Some 123;
-    path = "/"; params = None; fragment = None;
+    host = Host.of_string "www.rtm.tv";
+    port = Some (Port.of_int 123);
+    path = Path.of_string "/";
+    params = None; fragment = None;
   };
   {
-    id = Some 2;
+    id = Some (ID.of_int 2);
     scheme = HTTPS;
     user = None; password = None;
-    host = "feeds.rtm.tv"; port = None;
-    path = "/"; params = None; fragment = None;
+    host = Host.of_string "feeds.rtm.tv"; port = None;
+    path = Path.of_string "/";
+    params = None; fragment = None;
   };
   {
-    id = Some 3;
+    id = Some (ID.of_int 3);
     scheme = HTTPS;
     user = None; password = None;
-    host = "www.rightthisminute.com"; port = None;
-    path = "/search/site/perhaps"; params = Some [
+    host = Host.of_string "www.rightthisminute.com"; port = None;
+    path = Path.of_string "/search/site/perhaps";
+    params = Some (Params.of_list [
       { key = "raining"; value = Some "outside"; }
-    ];
-    fragment = Some "main-content";
+    ]);
+    fragment = Some (Fragment.of_string "main-content");
   };
-]
+])
 
 let aliases = ref [
   { name = "coffee"; url = nth !urls 0 };
@@ -89,17 +71,17 @@ let aliases = ref [
   { name = "owl";    url = nth !urls 2 };
 ]
 
-let url_scheme_values = Schema.([
+let url_scheme_values = Url.Scheme.(Schema.([
     enum_value "http" ~value:HTTP;
     enum_value "https" ~value:HTTPS;
-])
+]))
 let url_scheme =
   Schema.(enum "URLScheme" ~values:url_scheme_values)
 let url_scheme_input =
   Schema.Arg.(enum "URLSchemeInput" ~values:url_scheme_values)
 
-let url_param = Schema.(obj "URLParam"
-  ~fields:(fun url_param -> [
+let url_param = Url.(Schema.(obj "URLParam"
+  ~fields:(fun param -> [
     field "key"
       ~args:Arg.[]
       ~typ:(non_null string)
@@ -110,16 +92,17 @@ let url_param = Schema.(obj "URLParam"
       ~typ:string
       ~resolve:(fun () p -> p.value)
     ;
-  ])
+  ]))
 )
 
-let url = Schema.(obj "URL"
+let url = Url.(Schema.(obj "URL"
   ~fields:(fun url -> [
     field "id"
       ~args:Arg.[]
       ~typ:(non_null guid)
-      ~resolve:(fun () (p:url) ->
-        match p.id with | None -> "ERROR" | Some id -> string_of_int id 
+      ~resolve:(fun () (p:t) -> match p.id with 
+        | None -> "ERROR"
+        | Some id -> id |> ID.to_int |> string_of_int
       )
     ;
     field "scheme"
@@ -130,40 +113,40 @@ let url = Schema.(obj "URL"
     field "user"
       ~args:Arg.[]
       ~typ:string
-      ~resolve:(fun () p -> p.user)
+      ~resolve:(fun () p -> Option.map p.user Username.to_string)
     ;
     field "password"
       ~args:Arg.[]
       ~typ:string
-      ~resolve:(fun () p -> p.password)
+      ~resolve:(fun () p -> Option.map p.password Password.to_string)
     ;
     field "host"
       ~args:Arg.[]
       ~typ:(non_null string)
-      ~resolve:(fun () p -> p.host)
+      ~resolve:(fun () p -> Host.to_string p.host)
     ;
     field "port"
       ~args:Arg.[]
       ~typ:int
-      ~resolve:(fun () p -> p.port)
+      ~resolve:(fun () p -> Option.map p.port Port.to_int)
     ;
     field "path"
       ~args:Arg.[]
       ~typ:(non_null string)
-      ~resolve:(fun () p -> p.path)
+      ~resolve:(fun () p -> Path.to_string p.path)
     ;
     field "params"
       ~args:Arg.[]
       ~typ:(list (non_null url_param))
-      ~resolve:(fun () p -> p.params)
+      ~resolve:(fun () p -> Option.map p.params Params.to_list)
     ;
     field "fragment"
       ~args:Arg.[]
       ~typ:string
-      ~resolve:(fun () p -> p.fragment)
+      ~resolve:(fun () p -> Option.map p.fragment Fragment.to_string)
     ;
   ])
-)
+))
 
 
 let alias = Schema.(obj "Alias"
@@ -227,7 +210,7 @@ let use = Schema.(obj "Use"
 )
 
 let url_param_input = Schema.Arg.(obj "URLParamInput"
-  ~coerce:(fun key value -> { key; value; })
+  ~coerce:(fun key value -> Url.({ key; value; }))
   ~fields:[
     arg "key" ~typ:(non_null string);
     arg "value" ~typ:string;
@@ -235,7 +218,17 @@ let url_param_input = Schema.Arg.(obj "URLParamInput"
 
 let url_input = Schema.Arg.(obj "URLInput"
   ~coerce:(fun scheme user password host port path params fragment ->
-    { id = None; scheme; user; password; host; port; path; params; fragment }
+    Url.({
+      id = None;
+      scheme;
+      user = Option.map user Username.of_string;
+      password = Option.map password Password.of_string;
+      host = Host.of_string host;
+      port = Option.map port Port.of_int;
+      path = Path.of_string path;
+      params = Option.map params Params.of_list;
+      fragment = Option.map fragment Fragment.of_string;
+    })
   )
   ~fields:[
     arg  "scheme" ~typ:(non_null url_scheme_input);
@@ -297,9 +290,9 @@ let schema = Schema.(schema [
       ~resolve:(fun () () { name; url; client_mutation_id; } ->
         let id = match (last_opt !urls) with
           | None | Some { id = None } -> 1
-          | Some { id = Some id } -> id + 1
+          | Some { id = Some id } -> (Url.ID.to_int id) + 1
         in
-        let url' = { url with id = Some id } in
+        let url' = { url with id = Some (Url.ID.of_int id) } in
         urls := append !urls [url'];
         let alias = { name; url = url' } in
         aliases := append !aliases [alias];

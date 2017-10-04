@@ -3,4 +3,4 @@
 (executable
  ((name main)
   (public_name RTMDotTV)
-  (libraries (lib cohttp.lwt graphql-lwt yojson))))
+  (libraries (model cohttp.lwt graphql-lwt yojson))))
