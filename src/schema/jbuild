@@ -1,0 +1,5 @@
+(jbuild_version 1)
+
+(library
+ ((name schema)
+  (libraries (common model core cohttp.lwt graphql-lwt yojson))))
