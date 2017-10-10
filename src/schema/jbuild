@@ -2,4 +2,5 @@
 
 (library
  ((name schema)
-  (libraries (common model core cohttp.lwt graphql-lwt yojson))))
+  (libraries (helpers model
+              core cohttp.lwt graphql-lwt yojson))))

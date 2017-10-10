@@ -11,8 +11,6 @@ let scheme_values = Model.Url.Scheme.(GqlSchema.([
 
 let scheme =
   GqlSchema.(enum "URLScheme" ~values:scheme_values)
-(* let scheme_input =
-  GqlSchema.Arg.(enum "URLSchemeInput" ~values:scheme_values) *)
 
 let param = Model.Url.(GqlSchema.(obj "URLParam"
   ~fields:(fun param -> [
