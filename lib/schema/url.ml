@@ -3,6 +3,7 @@ open Graphql_lwt
 
 module GqlSchema = Graphql_lwt.Schema
 module Opt = Core.Option
+module Model = Lib_model
 
 let scheme_values = Model.Url.Scheme.(GqlSchema.([
     enum_value "http" ~value:HTTP;

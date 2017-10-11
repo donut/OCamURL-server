@@ -2,6 +2,7 @@
 open Graphql_lwt
 
 module Opt = Core.Option
+module Model = Lib_model
 
 
 let use = Model.Use.(Graphql_lwt.Schema.(obj "Use"

@@ -1,5 +1,6 @@
 
 open Graphql_lwt
+module Model = Lib_model
 
 let alias = Model.Alias.(Graphql_lwt.Schema.(obj "Alias"
   ~fields:(fun alias -> [

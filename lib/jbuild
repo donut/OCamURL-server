@@ -1,0 +1,5 @@
+(jbuild_version 1)
+
+(library
+ ((name lib)
+  (libraries (lib_common lib_db lib_model lib_schema))))

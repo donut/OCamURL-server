@@ -1,6 +1,6 @@
 (jbuild_version 1)
 
 (library
- ((name schema)
-  (libraries (helpers model
+ ((name lib_schema)
+  (libraries (lib_common lib_model
               core cohttp.lwt graphql-lwt yojson))))

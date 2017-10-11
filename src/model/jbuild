@@ -1,5 +1,0 @@
-(jbuild_version 1)
-
-(library
- ((name model)
-  (libraries (helpers core uri))))

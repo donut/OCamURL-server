@@ -1,0 +1,6 @@
+(jbuild_version 1)
+
+(library
+ ((name lib_db)
+  (libraries (lib_model
+              core mariadb ))))

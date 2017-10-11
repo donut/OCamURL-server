@@ -5,7 +5,7 @@ open Str
 open Lwt
 
 open Ext_list
-open Model
+open Lib.Model
 open Printf
 
 module Gql = Graphql_lwt
@@ -48,7 +48,7 @@ let aliases = Alias.(ref [
 ])
 
 let url_scheme_input =
-  Gql.Schema.Arg.(enum "URLSchemeInput" ~values:Schema.Url.scheme_values)
+  Gql.Schema.Arg.(enum "URLSchemeInput" ~values:Lib.Schema.Url.scheme_values)
 
 
 type put_alias_input = {
@@ -109,7 +109,7 @@ let put_alias_payload = Gql.Schema.(obj "PutAliasPayload"
   ~fields:(fun payload -> [
     field "alias"
       ~args:Arg.[]
-      ~typ:(non_null Schema.Alias.alias)
+      ~typ:(non_null Lib.Schema.Alias.alias)
       ~resolve:(fun () p -> p.alias)
     ;
     field "clientMutationId"
@@ -125,7 +125,7 @@ let schema = Gql.Schema.(schema [
       ~args:Arg.[
         arg "alias" ~typ:(non_null string);
       ]
-      ~typ:Schema.Url.url
+      ~typ:Lib.Schema.Url.url
       ~resolve:(fun () () name -> Alias.(
         let compare (alias:t) = (Name.to_string alias.name) = name in
         let alias = find_opt (compare) !aliases in
@@ -147,7 +147,7 @@ let schema = Gql.Schema.(schema [
 
         urls := append !urls [url'];
 
-        Db.Insert.url url';
+        Lib.DB.Insert.url url';
 
         let alias = Alias.({ name = Name.of_string name; url = url' }) in
         aliases := append !aliases [alias];

@@ -1,6 +1,6 @@
 
 open Util
-open Model
+open Lib_model
 open Printf
 
 module Mdb = Mariadb.Blocking
@@ -19,14 +19,14 @@ let url url' =
   in
   let res = M.Stmt.execute stmt Url.([|
     `String (Scheme.to_string url'.scheme);
-    maybe_string (Username.to_string) url'.user
-    maybe_string (Password.to_string) url'.password
+    maybe_string (Username.to_string) url'.user;
+    maybe_string (Password.to_string) url'.password;
     `String (Host.to_string url'.host);
     (match url'.port with 
       | Some p -> `Int (Port.to_int p) | None -> `Null);
     `String (Path.to_string url'.path);
-    maybe_string (Params.to_string) url'.params
-    maybe_string (Fragment.to_string) url'.fragment
+    maybe_string (Params.to_string) url'.params;
+    maybe_string (Fragment.to_string) url'.fragment;
   |]) |> or_die "execute" in
   begin match res with
   | Some res ->
