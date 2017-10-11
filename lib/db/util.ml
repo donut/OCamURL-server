@@ -1,6 +1,5 @@
 
 open Printf
-module Mdb = Mariadb.Blocking
 
 let print_row row =
   let module M = Mariadb.Blocking in
@@ -38,9 +37,3 @@ let stream res =
 let or_die where = function
   | Ok x -> x
   | Error (num, msg) -> failwith @@ sprintf "%s #%d: %s" where num msg 
-
-let connect = Mdb.connect
-  ~host:"localhost"
-  ~user:"root"
-  ~pass:""
-  ~db:"rtmDOTtv" () |> or_die "connect"

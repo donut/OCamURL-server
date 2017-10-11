@@ -120,7 +120,7 @@ let put_alias_payload = Gql.Schema.(obj "PutAliasPayload"
   ])
 )
 
-let schema = Gql.Schema.(schema [
+let schema db_connection = Gql.Schema.(schema [
     field "url"
       ~args:Arg.[
         arg "alias" ~typ:(non_null string);
@@ -147,7 +147,7 @@ let schema = Gql.Schema.(schema [
 
         urls := append !urls [url'];
 
-        Lib.DB.Insert.url url';
+        Lib.DB.Insert.url db_connection url';
 
         let alias = Alias.({ name = Name.of_string name; url = url' }) in
         aliases := append !aliases [alias];
@@ -157,4 +157,11 @@ let schema = Gql.Schema.(schema [
 )
 
 let () =
-  Gql.Server.start ~ctx:(fun () -> ()) schema |> Lwt_main.run;
+  let connection = Lib.DB.connect
+    ~host:"localhost" ~user:"root" ~pass:"" ~db:"rtmDOTtv" ()
+    |> Lib.DB.or_die "connect"
+  in
+
+  Gql.Server.start ~ctx:(fun () -> ()) (schema connection) |> Lwt_main.run;
+
+  Lib.DB.close connection;
