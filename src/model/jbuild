@@ -2,4 +2,4 @@
 
 (library
  ((name model)
-  (libraries (helpers core))))
+  (libraries (helpers core uri))))

@@ -120,39 +120,6 @@ let put_alias_payload = Gql.Schema.(obj "PutAliasPayload"
   ])
 )
 
-let print_row row =
-  let module M = Mariadb.Blocking in
-  printf "---\n%!";
-  M.Row.StringMap.iter
-    (fun name field ->
-      printf "%20s " name;
-      match M.Field.value field with
-      | `Int i -> printf "%d\n%!" i
-      | `Float x -> printf "%f\n%!" x
-      | `String s -> printf "%s\n%!" s
-      | `Bytes b -> printf "%s\n%!" "Bytes! :)"
-      | `Time t ->
-          printf "%04d-%02d-%02d %02d:%02d:%02d\n%!"
-            (M.Time.year t)
-          (M.Time.month t)
-          (M.Time.day t)
-          (M.Time.hour t)
-          (M.Time.minute t)
-          (M.Time.second t)
-    | `Null -> printf "NULL\n%!")
-  row
-
-let stream res =
-  let module M = Mariadb.Blocking in
-  let module F = struct exception E of M.error end in
-  let next _ =
-    match M.Res.fetch (module M.Row.Map) res with
-    | Ok (Some _ as row) -> row
-    | Ok None -> None
-    | Error e -> raise (F.E e) in
-  try Ok (Stream.from next)
-  with F.E e -> Error e
-
 let schema = Gql.Schema.(schema [
     field "url"
       ~args:Arg.[
@@ -180,32 +147,7 @@ let schema = Gql.Schema.(schema [
 
         urls := append !urls [url'];
 
-        let module M = Mariadb.Blocking in
-        let or_die where = function
-          | Ok x -> x
-          | Error (num, msg) -> failwith @@ sprintf "%s #%d: %s" where num msg 
-        in
-        let mariadb = M.connect
-          ~host:"localhost"
-          ~user:"root"
-          ~pass:""
-          ~db:"rtmDOTtv" () |> or_die "connect" in
-        let query = "INSERT INTO url SET scheme = ?, host = ?, path = ?" in
-        let stmt = M.prepare mariadb query |> or_die "prepare" in
-        let res = M.Stmt.execute stmt Url.([|
-          `String (Scheme.to_string url'.scheme);
-          `String (Host.to_string url'.host);
-          `String (Path.to_string url'.path);
-        |]) |> or_die "execute" in
-        begin match res with
-        | Some res ->
-          printf "#rows: %d\n%!" (M.Res.num_rows res);
-          let s = stream res |> or_die "stream" in
-          Stream.iter print_row s
-        | None -> ()
-        end;
-        M.Stmt.close stmt |> or_die "close statement";
-        M.close mariadb;
+        Db.Insert.url url';
 
         let alias = Alias.({ name = Name.of_string name; url = url' }) in
         aliases := append !aliases [alias];
@@ -215,4 +157,4 @@ let schema = Gql.Schema.(schema [
 )
 
 let () =
-  Gql.Server.start ~ctx:(fun () -> ()) schema |> Lwt_main.run  
+  Gql.Server.start ~ctx:(fun () -> ()) schema |> Lwt_main.run;

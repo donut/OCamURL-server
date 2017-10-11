@@ -3,6 +3,6 @@
 (executable
  ((name main)
   (public_name RTMDotTV)
-  (libraries (model schema
+  (libraries (db model schema
               cohttp.lwt graphql-lwt yojson
               mariadb))))
