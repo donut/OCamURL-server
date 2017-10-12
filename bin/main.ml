@@ -147,6 +147,7 @@ let schema db_connection = Gql.Schema.(schema [
 
         urls := append !urls [url'];
 
+        let _ = Lib.DB.Select.id_of_url db_connection url' in
         Lib.DB.Insert.url db_connection url';
 
         let alias = Alias.({ name = Name.of_string name; url = url' }) in
@@ -162,6 +163,32 @@ let () =
     |> Lib.DB.or_die "connect"
   in
 
-  Gql.Server.start ~ctx:(fun () -> ()) (schema connection) |> Lwt_main.run;
+  let url = Url.({
+    id = None;
+    scheme = HTTP;
+    user = Some (Username.of_string "bombs");
+    password = Some (Password.of_string "pow");
+    host = Host.of_string "www.rightthisminute.com"; port = None;
+    path = Path.of_string "/search/site/perhaps";
+    params = Some (Params.of_list [
+      { key = "raining"; value = Some "outside"; }
+    ]);
+    fragment = Some (Fragment.of_string "main-content");
+  }) in
+
+  let exception ID_of_inserted_URL_missing in
+
+  let id_of = Lib.DB.Select.id_of_url connection in
+  let url_id = match id_of url with
+    | Some id -> id
+    | None -> 
+      Lib.DB.Insert.url connection url;
+      match id_of url with 
+      | Some id -> id
+      | None -> raise ID_of_inserted_URL_missing
+  in
+
+  printf "id of url: %d\n" url_id;
+  (* Gql.Server.start ~ctx:(fun () -> ()) (schema connection) |> Lwt_main.run; *)
 
   Lib.DB.close connection;

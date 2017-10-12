@@ -37,3 +37,23 @@ let stream res =
 let or_die where = function
   | Ok x -> x
   | Error (num, msg) -> failwith @@ sprintf "%s #%d: %s" where num msg 
+
+
+let maybe_string transform maybe = match maybe with
+  | None -> `Null
+  | Some s -> `String (transform s)
+
+let maybe_int transform maybe = match maybe with
+  | None -> `Null
+  | Some s -> `Int (transform s)
+
+let values_of_url url = Lib_model.Url.([|
+  `String (Scheme.to_string url.scheme);
+  url.user |> maybe_string (Username.to_string);
+  url.password |> maybe_string (Password.to_string);
+  `String (Host.to_string url.host);
+  url.port |> maybe_int (Port.to_int);
+  `String (Path.to_string url.path);
+  url.params |> maybe_string (Params.to_string) ;
+  url.fragment |> maybe_string (Fragment.to_string);
+|])

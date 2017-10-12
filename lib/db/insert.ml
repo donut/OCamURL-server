@@ -12,24 +12,10 @@ let url connection url' =
       ^ "VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
   in
 
-  let stmt = M.prepare connection query |> or_die "prepare" in
-
-  let maybe_string transform maybe = match maybe with
-    | None -> `Null
-    | Some s -> `String (transform s)
-  in
-
-  let res = M.Stmt.execute stmt Url.([|
-    `String (Scheme.to_string url'.scheme);
-    maybe_string (Username.to_string) url'.user;
-    maybe_string (Password.to_string) url'.password;
-    `String (Host.to_string url'.host);
-    (match url'.port with 
-      | Some p -> `Int (Port.to_int p) | None -> `Null);
-    `String (Path.to_string url'.path);
-    maybe_string (Params.to_string) url'.params;
-    maybe_string (Fragment.to_string) url'.fragment;
-  |]) |> or_die "execute" in
+  let stmt = M.prepare connection query
+    |> or_die "prepare" in
+  let res = M.Stmt.execute stmt (values_of_url url')
+    |> or_die "execute" in
 
   begin match res with
   | Some res ->
