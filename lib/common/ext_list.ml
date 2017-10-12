@@ -1,4 +1,6 @@
 
+include List
+
 let rec last = function
   | [] -> raise Not_found
   | [element] -> element
@@ -7,5 +9,3 @@ let rec last = function
 let last_opt list = 
   try Some (last list) with
     | Not_found -> None
-
-include List
