@@ -13,7 +13,7 @@
 		{
 			"taskName": "run",
 			"type": "shell",
-			"command": "pwd; and ./_build/default/bin/main.exe",
+			"command": "./_build/default/bin/main.exe",
 			"problemMatcher": [
 				"$ocamlc"
 			]
