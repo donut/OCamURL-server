@@ -163,15 +163,26 @@ let () =
     |> Lib.DB.or_die "connect"
   in
 
+  Random.self_init();
+
+  let alias_name = "bingo" ^ (Random.int 999 |> string_of_int) in
+  let exception Alias_already_exists of string in
+
+  match Lib.DB.Select.id_of_alias connection alias_name with
+    | Some _ -> raise (Alias_already_exists alias_name)
+    | None -> ();
+
   let url = Url.({
     id = None;
     scheme = HTTP;
     user = Some (Username.of_string "bombs");
     password = Some (Password.of_string "pow");
-    host = Host.of_string "www.rightthisminute.com"; port = None;
+    host = Host.of_string "www.rightthisminute.com";
+    port = None;
     path = Path.of_string "/search/site/perhaps";
     params = Some (Params.of_list [
-      { key = "raining"; value = Some "outside"; }
+      { key = ""; value = Some ""; };
+      { key = "raining"; value = Some "outside"; };
     ]);
     fragment = Some (Fragment.of_string "main-content");
   }) in
@@ -181,14 +192,27 @@ let () =
   let id_of = Lib.DB.Select.id_of_url connection in
   let url_id = match id_of url with
     | Some id -> id
-    | None -> 
+    | None ->  
       Lib.DB.Insert.url connection url;
       match id_of url with 
       | Some id -> id
       | None -> raise ID_of_inserted_URL_missing
   in
 
+  let url' = { url with id = Some (Url.ID.of_int url_id) } in
+  let alias = Alias.({ name = Name.of_string alias_name; url = url' }) in
+  Lib.DB.Insert.alias connection alias;
+
   printf "id of url: %d\n" url_id;
+  Core.print_endline "booga";
+
+  let url_string = match Lib.DB.Select.url_of_alias connection alias_name with
+  | None -> "No url found for " ^ alias_name
+  | Some url -> Url.to_string url
+  in
+
+  print_endline ("Found URL: " ^ url_string);
+
   (* Gql.Server.start ~ctx:(fun () -> ()) (schema connection) |> Lwt_main.run; *)
 
   Lib.DB.close connection;

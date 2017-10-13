@@ -5,9 +5,14 @@ open Lib_common.Option
 
 module Scheme : sig
   type t = HTTP | HTTPS
+  val of_string : string -> t
   val to_string : t -> string
 end = struct
   type t = HTTP | HTTPS
+  exception No_matching_string of string
+  let of_string s = match String.lowercase_ascii s with
+    | "http" -> HTTP | "https" -> HTTPS
+    | _ -> raise (No_matching_string s)
   let to_string = function HTTP -> "http" | HTTPS -> "https"
 end
 
@@ -16,7 +21,14 @@ module Username : Convertable.StringType = Convertable.String
 module Password : Convertable.StringType = Convertable.String
 module Host : Convertable.StringType = Convertable.String
 module Port : Convertable.IntType = Convertable.Int
-module Path : Convertable.StringType = Convertable.String
+
+module Path : Convertable.StringType = struct
+  type t = string
+  let of_string x = x
+  let to_string x = 
+    if String.length x > 0 && not (Char.equal (String.get x 0) '/')
+    then "/" ^ x else x
+end
 
 type param = { key: string; value: string option; }
 
@@ -24,11 +36,25 @@ module Params : sig
   type t
   val of_list : param list -> t
   val to_list : t -> param list
+  val of_string : string -> t
   val to_string : t -> string
 end = struct
   type t = param list
   let of_list x = x
   let to_list x = x
+  let of_string x =
+    let dec = Uri.pct_decode in
+    String.split_on_char '&' x
+    |> List.map (String.split_on_char '=')
+    |> List.map (function 
+      | [] -> { key = ""; value = None }
+      | [key] -> { key = dec key; value = None }
+      | [key; value] -> { key = dec key; value = Some (dec value) }
+      | key :: value -> {
+        key = dec key;
+        value = Some (String.concat "=" value |> dec)
+      }
+    )
   let to_string x = 
     let pair_up = List.map (fun { key; value; } ->
       let enc = Uri.pct_encode  in 
@@ -39,12 +65,7 @@ end = struct
           "=" ^ enc ~component:`Query_value (value =?: lazy "") in
       k ^ v
     ) in
-    let rec join lst = match lst with
-      | [] -> ""
-      | [pair] -> pair
-      | pair :: remainder -> pair ^ "&" ^ (join remainder)
-    in
-    join @@ pair_up x
+    String.concat "&" @@ pair_up x
 end
 
 module Fragment : Convertable.StringType = Convertable.String
@@ -60,3 +81,21 @@ type t = {
   params: Params.t option;
   fragment: Fragment.t option;
 }
+
+let to_string url =
+  let opt_to_str maybe prefix to_string =
+    (maybe, (^) prefix <% to_string) =!?: lazy "" in
+
+  let scheme = Scheme.to_string url.scheme in
+  let user = opt_to_str url.user "" Username.to_string in
+  let password = opt_to_str url.password ":" Password.to_string in
+  let auth = match (url.user, url.password) with
+    | (None, None) -> "" 
+    | _ -> user ^ password ^ "@" in
+  let host = Host.to_string url.host in
+  let path = Path.to_string url.path in
+  let port = opt_to_str url.port ":" (Port.to_int %> string_of_int) in
+  let params = opt_to_str url.params "?" Params.to_string in
+  let fragment = opt_to_str url.fragment "#" Fragment.to_string in
+
+  scheme ^ "://" ^ auth ^ host ^ port ^ path ^ params ^ fragment

@@ -1,11 +1,29 @@
 
 open Util
 open Lib_model
+open Lib_common
 open Printf
 
-let url_fields = [
-  "scheme"; "user"; "password"; "host"; "port"; "path"; "params"; "fragment";
-]
+exception ID_not_int
+
+let first_row_of_result = function
+  | None -> None
+  | Some res -> match Mdb.Res.num_rows res with 
+    | 0 -> None
+    | _ -> Some (Stream.next (stream res |> or_die "stream"))
+
+let id_of_first_row = fun result ->
+  match first_row_of_result result with
+  | None -> None
+  | Some row -> 
+    match (row |> Mdb.Row.StringMap.find "id" |> Mdb.Field.value) with
+      | `Int id -> Some id
+      | _ -> raise ID_not_int
+
+let id_of_alias connection name =
+  let query = "SELECT id FROM alias WHERE name = ?" in
+  let values = [| `String name |] in
+  execute_query connection query values id_of_first_row
 
 let id_of_url connection url = 
   let values = values_of_url url |> Array.to_list in
@@ -21,22 +39,38 @@ let id_of_url connection url =
   let query = 
     "SELECT id FROM url WHERE " ^ where ^ " ORDER BY id ASC LIMIT 1"
   in 
-  let stmt = Mdb.prepare connection query
-    |> or_die "prepare" in
+  execute_query connection query (Array.of_list values') id_of_first_row
 
-  let result = Mdb.Stmt.execute stmt (Array.of_list values')
-    |> or_die "execute" in
-   
-  let id = match result with 
+
+let url_of_alias connection name =
+  let fields = "id" :: url_fields in
+  let select = fields
+    |> List.map (fun f -> "url." ^ f ^ " AS " ^ f)
+    |> String.concat ", "in
+  let query = 
+    "SELECT " ^ select ^ " FROM alias "
+     ^ "JOIN url ON url.id = alias.url "
+     ^ "WHERE alias.name = ? "
+     ^ "ORDER BY url.id LIMIT 1" in
+  execute_query connection query [| `String name |] (fun result ->
+    match first_row_of_result result with
     | None -> None
-    | Some res -> match Mdb.Res.num_rows res with
-      | 0 -> None
-      | _ -> 
-        let row = Stream.next (stream res |> or_die "stream") in
-        match (row |> Mdb.Row.StringMap.find "id" |> Mdb.Field.value) with
-          | `Int id -> Some id
-          | _ -> None
-  in
-
-  Mdb.Stmt.close stmt |> or_die "close statement";
-  id
+    | Some row -> Some Url.(
+      let port = match maybe_int_of_map row "port" (id) with 
+      (* MariaDB is returning NULL values of INT fields as 0 instead of `Null.
+       * @see https://github.com/andrenth/ocaml-mariadb/issues/10 *)
+        | None | Some 0 -> None
+        | Some p -> Some (Port.of_int p) in
+      {
+        id = maybe_int_of_map row "id" (ID.of_int);
+        scheme = string_of_map row "scheme" |> Scheme.of_string;
+        user = maybe_string_of_map row "user" (Username.of_string);
+        password = maybe_string_of_map row "password" (Password.of_string);
+        host = string_of_map row "host" |> Host.of_string;
+        port;
+        path = string_of_map row "path" |> Path.of_string;
+        params = maybe_string_of_map row "params" (Params.of_string);
+        fragment = maybe_string_of_map row "fragment" (Fragment.of_string);
+      }
+    )
+  )

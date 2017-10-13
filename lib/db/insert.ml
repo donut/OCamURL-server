@@ -3,26 +3,18 @@ open Util
 open Lib_model
 open Printf
 
+let single_row_query table field_list =
+  let join = String.concat ", " in
+  let fields = join field_list in
+  let placeholders = field_list |> List.map (fun _ -> "?") |> join in
+  "INSERT INTO " ^ table ^ " (" ^ fields ^ ") VALUES (" ^ placeholders ^ ")"
+
+
+let alias connection alias' =
+  let query = single_row_query "alias" alias_fields in
+  execute_query connection query (values_of_alias alias') (fun _ -> ())
+
+
 let url connection url' = 
-  let module M = Mdb in
-
-  let query = 
-    "INSERT INTO url " 
-      ^ "(scheme, user, password, host, port, path, params, fragment) "
-      ^ "VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-  in
-
-  let stmt = M.prepare connection query
-    |> or_die "prepare" in
-  let res = M.Stmt.execute stmt (values_of_url url')
-    |> or_die "execute" in
-
-  begin match res with
-  | Some res ->
-    printf "#rows: %d\n%!" (M.Res.num_rows res);
-    let s = stream res |> or_die "stream" in
-    Stream.iter print_row s
-  | None -> ()
-  end;
-
-  M.Stmt.close stmt |> or_die "close statement";
+  let query = single_row_query "url" url_fields in
+  execute_query connection query (values_of_url url') (fun _ -> ())
