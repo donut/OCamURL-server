@@ -6,46 +6,9 @@ open Lwt
 
 open Lib.Common.Ext_list
 open Lib.Model
-open Printf
 
 module Gql = Graphql_lwt
 
-let urls = Url.(ref [
-  {
-    id = Some (ID.of_int 1);
-    scheme = HTTP;
-    user = None; password = None;
-    host = Host.of_string "www.rtm.tv";
-    port = Some (Port.of_int 123);
-    path = Path.of_string "/";
-    params = None; fragment = None;
-  };
-  {
-    id = Some (ID.of_int 2);
-    scheme = HTTPS;
-    user = None; password = None;
-    host = Host.of_string "feeds.rtm.tv"; port = None;
-    path = Path.of_string "/";
-    params = None; fragment = None;
-  };
-  {
-    id = Some (ID.of_int 3);
-    scheme = HTTPS;
-    user = None; password = None;
-    host = Host.of_string "www.rightthisminute.com"; port = None;
-    path = Path.of_string "/search/site/perhaps";
-    params = Some (Params.of_list [
-      { key = "raining"; value = Some "outside"; }
-    ]);
-    fragment = Some (Fragment.of_string "main-content");
-  };
-])
-
-let aliases = Alias.(ref [
-  { name = Name.of_string "coffee"; url = nth !urls 0 };
-  { name = Name.of_string "nugget"; url = nth !urls 1 };
-  { name = Name.of_string "owl";    url = nth !urls 2 };
-])
 
 let url_scheme_input =
   Gql.Schema.Arg.(enum "URLSchemeInput" ~values:Lib.Schema.Url.scheme_values)
@@ -126,11 +89,9 @@ let schema db_connection = Gql.Schema.(schema [
         arg "alias" ~typ:(non_null string);
       ]
       ~typ:Lib.Schema.Url.url
-      ~resolve:(fun () () name -> Alias.(
-        let compare (alias:t) = (Name.to_string alias.name) = name in
-        let alias = find_opt (compare) !aliases in
-        Option.map alias (fun a -> a.url)
-      ))
+      ~resolve:(fun () () name -> 
+        Lib.DB.Select.url_of_alias db_connection name
+      )
   ]
   ~mutations:[
     field "putAlias"
@@ -138,22 +99,31 @@ let schema db_connection = Gql.Schema.(schema [
       ~args:Arg.[
         arg "input" ~typ:(non_null put_alias_input);
       ]
-      ~resolve:(fun () () { name; url; client_mutation_id; } ->
-        let id = match (last_opt !urls) with
-          | None | Some { id = None } -> 1
-          | Some { id = Some id } -> (Url.ID.to_int id) + 1
+      ~resolve:(fun () () { name; url; client_mutation_id; } -> Lib.(DB.(Model.(
+        let exception Alias_already_exists of string in
+
+        match Select.id_of_alias db_connection name with
+          | Some id ->
+            raise (Alias_already_exists (name ^ ":" ^ (string_of_int id)))
+          | None -> ();
+
+        let exception ID_of_inserted_URL_missing in
+        let id_of = Select.id_of_url db_connection in
+        let url_id = match id_of url with
+          | Some id -> id
+          | None ->  
+            Insert.url db_connection url;
+            match id_of url with 
+            | Some id -> id
+            | None -> raise ID_of_inserted_URL_missing
         in
-        let url' = { url with id = Some (Url.ID.of_int id) } in
 
-        urls := append !urls [url'];
-
-        let _ = Lib.DB.Select.id_of_url db_connection url' in
-        Lib.DB.Insert.url db_connection url';
-
+        let url' = { url with id = Some (Url.ID.of_int url_id) } in
         let alias = Alias.({ name = Name.of_string name; url = url' }) in
-        aliases := append !aliases [alias];
+        Insert.alias db_connection alias;
+
         { alias; client_mutation_id; }
-      )
+      ))))
   ]
 )
 
@@ -163,56 +133,6 @@ let () =
     |> Lib.DB.or_die "connect"
   in
 
-  Random.self_init();
-
-  let alias_name = "bingo" ^ (Random.int 999 |> string_of_int) in
-  let exception Alias_already_exists of string in
-
-  match Lib.DB.Select.id_of_alias connection alias_name with
-    | Some _ -> raise (Alias_already_exists alias_name)
-    | None -> ();
-
-  let url = Url.({
-    id = None;
-    scheme = HTTP;
-    user = Some (Username.of_string "bombs");
-    password = Some (Password.of_string "pow");
-    host = Host.of_string "www.rightthisminute.com";
-    port = None;
-    path = Path.of_string "/search/site/perhaps";
-    params = Some (Params.of_list [
-      { key = ""; value = Some ""; };
-      { key = "raining"; value = Some "outside"; };
-    ]);
-    fragment = Some (Fragment.of_string "main-content");
-  }) in
-
-  let exception ID_of_inserted_URL_missing in
-
-  let id_of = Lib.DB.Select.id_of_url connection in
-  let url_id = match id_of url with
-    | Some id -> id
-    | None ->  
-      Lib.DB.Insert.url connection url;
-      match id_of url with 
-      | Some id -> id
-      | None -> raise ID_of_inserted_URL_missing
-  in
-
-  let url' = { url with id = Some (Url.ID.of_int url_id) } in
-  let alias = Alias.({ name = Name.of_string alias_name; url = url' }) in
-  Lib.DB.Insert.alias connection alias;
-
-  printf "id of url: %d\n" url_id;
-  Core.print_endline "booga";
-
-  let url_string = match Lib.DB.Select.url_of_alias connection alias_name with
-  | None -> "No url found for " ^ alias_name
-  | Some url -> Url.to_string url
-  in
-
-  print_endline ("Found URL: " ^ url_string);
-
-  (* Gql.Server.start ~ctx:(fun () -> ()) (schema connection) |> Lwt_main.run; *)
+  Gql.Server.start ~ctx:(fun () -> ()) (schema connection) |> Lwt_main.run;
 
   Lib.DB.close connection;
