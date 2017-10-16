@@ -56,18 +56,13 @@ let url_of_alias connection name =
     match first_row_of_result result with
     | None -> None
     | Some row -> Some Url.(
-      let port = match maybe_int_of_map row "port" (id) with 
-      (* MariaDB is returning NULL values of INT fields as 0 instead of `Null.
-       * @see https://github.com/andrenth/ocaml-mariadb/issues/10 *)
-        | None | Some 0 -> None
-        | Some p -> Some (Port.of_int p) in
       {
         id = maybe_int_of_map row "id" (ID.of_int);
         scheme = string_of_map row "scheme" |> Scheme.of_string;
         user = maybe_string_of_map row "user" (Username.of_string);
         password = maybe_string_of_map row "password" (Password.of_string);
         host = string_of_map row "host" |> Host.of_string;
-        port;
+        port = maybe_int_of_map row "port" (Port.of_int);
         path = string_of_map row "path" |> Path.of_string;
         params = maybe_string_of_map row "params" (Params.of_string);
         fragment = maybe_string_of_map row "fragment" (Fragment.of_string);
