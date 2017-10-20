@@ -25,6 +25,11 @@ type put_alias_payload = {
   client_mutation_id: string;
 }
 
+type put_alias_payload_or_error = {
+  error: Lib.Schema.Error.t option;
+  payload: put_alias_payload option;
+}
+
 let url_param_input = Gql.Schema.Arg.(obj "URLParamInput"
   ~coerce:(fun key value -> Url.({ key; value; }))
   ~fields:[
@@ -83,6 +88,23 @@ let put_alias_payload = Gql.Schema.(obj "PutAliasPayload"
   ])
 )
 
+let put_alias_payload_or_error = Gql.Schema.(Lib.Schema.(
+  obj "PutAliasPayloadOrError"
+  ~fields:(fun put_alias_payload_or_error -> [
+    field "error"
+      ~args:Arg.[]
+      ~typ:Lib.Schema.Error.error
+      ~resolve:(fun () p -> p.error)
+    ;
+    field "payload"
+      ~args:Arg.[]
+      ~typ:put_alias_payload
+      ~resolve:(fun () p -> p.payload)
+    ;
+  ])
+
+))
+
 let schema db_connection = Gql.Schema.(schema [
     field "url"
       ~args:Arg.[
@@ -95,34 +117,49 @@ let schema db_connection = Gql.Schema.(schema [
   ]
   ~mutations:[
     field "putAlias"
-      ~typ:(non_null put_alias_payload)
+      ~typ:(non_null put_alias_payload_or_error)
       ~args:Arg.[
         arg "input" ~typ:(non_null put_alias_input);
       ]
       ~resolve:(fun () () { name; url; client_mutation_id; } -> Lib.(DB.(Model.(
         let exception Alias_already_exists of string in
-
-        match Select.id_of_alias db_connection name with
-          | Some id ->
-            raise (Alias_already_exists (name ^ ":" ^ (string_of_int id)))
-          | None -> ();
-
         let exception ID_of_inserted_URL_missing in
-        let id_of = Select.id_of_url db_connection in
-        let url_id = match id_of url with
-          | Some id -> id
-          | None ->  
-            Insert.url db_connection url;
-            match id_of url with 
+
+        try (
+          match Select.id_of_alias db_connection name with
+            | Some id ->
+              raise (Alias_already_exists (name ^ ":" ^ (string_of_int id)))
+            | None -> ();
+
+          let id_of = Select.id_of_url db_connection in
+          let url_id = match id_of url with
             | Some id -> id
-            | None -> raise ID_of_inserted_URL_missing
-        in
+            | None ->  
+              Insert.url db_connection url;
+              match id_of url with 
+              | Some id -> id
+              | None -> raise ID_of_inserted_URL_missing
+          in
 
-        let url' = { url with id = Some (Url.ID.of_int url_id) } in
-        let alias = Alias.({ name = Name.of_string name; url = url' }) in
-        Insert.alias db_connection alias;
+          let url' = { url with id = Some (Url.ID.of_int url_id) } in
+          let alias = Alias.({ name = Name.of_string name; url = url' }) in
+          Insert.alias db_connection alias;
 
-        { alias; client_mutation_id; }
+          { error = None; payload = Some { alias; client_mutation_id; }; }
+        )
+        with
+          | Alias_already_exists s -> { error = Some {
+            code = 1;
+            message = "The alias already exists: " ^ s;
+          }; payload = None; }
+          | ID_of_inserted_URL_missing -> { error = Some {
+            code = 2;
+            message = "Despite inserting the passed URL, it could not be found."
+          }; payload = None; }
+          | e -> { error = Some {
+            code = 3;
+            message = "An unknown error occurred: " ^ (Exn.to_string e);
+          }; payload = None; }
       ))))
   ]
 )
