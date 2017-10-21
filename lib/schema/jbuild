@@ -2,5 +2,5 @@
 
 (library
  ((name lib_schema)
-  (libraries (lib_common lib_model
+  (libraries (lib_common lib_db lib_model
               core cohttp.lwt graphql-lwt yojson))))

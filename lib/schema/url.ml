@@ -1,19 +1,18 @@
 
 open Graphql_lwt
 
-module GqlSchema = Graphql_lwt.Schema
 module Opt = Core.Option
 module Model = Lib_model
 
-let scheme_values = Model.Url.Scheme.(GqlSchema.([
+let scheme_values = Model.Url.Scheme.(Schema.([
     enum_value "http" ~value:HTTP;
     enum_value "https" ~value:HTTPS;
 ]))
 
-let scheme =
-  GqlSchema.(enum "URLScheme" ~values:scheme_values)
+let scheme = Schema.(enum "URLScheme" ~values:scheme_values)
+let scheme_input = Schema.Arg.(enum "URLSchemeInput" ~values:scheme_values)
 
-let param = Model.Url.(GqlSchema.(obj "URLParam"
+let param = Model.Url.(Schema.(obj "URLParam"
   ~fields:(fun param -> [
     field "key"
       ~args:Arg.[]
@@ -28,7 +27,14 @@ let param = Model.Url.(GqlSchema.(obj "URLParam"
   ]))
 )
 
-let url = Model.Url.(GqlSchema.(obj "URL"
+let param_input = Schema.Arg.(obj "URLParamInput"
+  ~coerce:(fun key value -> Model.Url.({ key; value; }))
+  ~fields:[
+    arg "key" ~typ:(non_null string);
+    arg "value" ~typ:string;
+  ])
+
+let url = Model.Url.(Schema.(obj "URL"
   ~fields:(fun url -> [
     field "id"
       ~args:Arg.[]
@@ -80,3 +86,28 @@ let url = Model.Url.(GqlSchema.(obj "URL"
     ;
   ])
 ))
+
+let input name = Schema.Arg.(obj name
+  ~coerce:(fun scheme user password host port path params fragment ->
+    Model.Url.(Core.Option.({
+      id = None;
+      scheme;
+      user = map user Username.of_string;
+      password = map password Password.of_string;
+      host = Host.of_string host;
+      port = map port Port.of_int;
+      path = Path.of_string path;
+      params = map params Params.of_list;
+      fragment = map fragment Fragment.of_string;
+    }))
+  )
+  ~fields:[
+    arg  "scheme" ~typ:(non_null scheme_input);
+    arg  "user" ~typ:string;
+    arg  "password" ~typ:string;
+    arg  "host" ~typ:(non_null string);
+    arg  "port" ~typ:int;
+    arg' "path" ~typ:string ~default:"";
+    arg  "params" ~typ:(list (non_null param_input));
+    arg  "fragment" ~typ:string;
+  ])
