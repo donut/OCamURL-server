@@ -63,14 +63,11 @@ let payload_or_error = Schema.(
 )
 
 let resolver db_connection = fun () () { name; url; client_mutation_id; }
--> DB.(Model.(
-  let exception Alias_already_exists of string in
-  let exception ID_of_inserted_URL_missing in
-
+-> DB.(Model.(Error.(
   try (
     match Select.id_of_alias db_connection name with
       | Some id ->
-        raise (Alias_already_exists (name ^ ":" ^ (string_of_int id)))
+        raise (E (Code.Bad_request, "The alias '" ^ name ^ "' already exists."))
       | None -> ();
 
     let id_of = Select.id_of_url db_connection in
@@ -80,7 +77,7 @@ let resolver db_connection = fun () () { name; url; client_mutation_id; }
         Insert.url db_connection url;
         match id_of url with 
         | Some id -> id
-        | None -> raise ID_of_inserted_URL_missing
+        | None -> raise (E (Code.Internal_server_error, "Despite inserting the passed URL, it could not be found in the database."))
     in
 
     let url' = { url with id = Some (Url.ID.of_int url_id) } in
@@ -89,17 +86,8 @@ let resolver db_connection = fun () () { name; url; client_mutation_id; }
 
     { error = None; payload = Some { alias; client_mutation_id; }; }
   )
-  with
-    | Alias_already_exists s -> { error = Some {
-      code = Error.Code.Bad_request;
-      message = "The alias already exists: " ^ s;
-    }; payload = None; }
-    | ID_of_inserted_URL_missing -> { error = Some {
-      code = Error.Code.Internal_server_error;
-      message = "Despite inserting the passed URL, it could not be found."
-    }; payload = None; }
-    | e -> { error = Some (Error.of_unexpected e); payload = None; }
-  ))
+  with e -> { error = Some (of_exception e); payload = None; }
+)))
 
 let field db_connection = Schema.(field "putAlias"
   ~typ:(non_null payload_or_error)

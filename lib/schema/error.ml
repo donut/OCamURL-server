@@ -2,12 +2,13 @@
 open Core
 open Graphql_lwt
 
-
 module Code = struct
   type t = 
       Bad_request
     | Internal_server_error
 end
+
+exception E of Code.t * string
 
 type t = {
   code: Code.t;
@@ -39,3 +40,6 @@ let of_unexpected error = {
   message = "An unexpected error occurred: " ^ (Exn.to_string error);
 }
   
+let of_exception = function
+  | E (code, message) -> { code; message; }
+  | e -> of_unexpected e
