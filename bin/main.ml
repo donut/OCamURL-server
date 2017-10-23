@@ -7,14 +7,7 @@ module Schema = Lib.Schema
 
 
 let schema db_connection = Gql.Schema.(Schema.(schema [
-    field "url"
-      ~args:Arg.[
-        arg "alias" ~typ:(non_null string);
-      ]
-      ~typ:Url.url
-      ~resolve:(fun () () name -> 
-        DB.Select.url_of_alias db_connection name
-      )
+    Url_qry.field db_connection;
   ]
   ~mutations:[
     Put_alias_mut.field db_connection;

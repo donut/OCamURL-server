@@ -87,6 +87,16 @@ let url = Model.Url.(Schema.(obj "URL"
   ])
 ))
 
+type or_error = {
+  error: Error.t option;
+  url: Model.Url.t option;
+}
+
+let or_error = Error.make_x_or_error "URLOrError"
+  ~x_name:"url" ~x_type:url
+  ~resolve_error:(fun () p -> p.error)
+  ~resolve_x:(fun () p -> p.url)
+
 let input name = Schema.Arg.(obj name
   ~coerce:(fun scheme user password host port path params fragment ->
     Model.Url.(Core.Option.({
