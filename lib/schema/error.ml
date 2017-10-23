@@ -35,6 +35,21 @@ let error = Schema.(obj "Error"
   ])
 )
 
+let make_x_or_error type_name ~x_name ~x_type ~resolve_error ~resolve_x =
+  Schema.(obj type_name ~fields:(fun x_or_error -> [
+    field "error"
+      ~args:Arg.[]
+      ~typ:error
+      ~resolve:resolve_error
+    ;
+    field x_name
+      ~args:Arg.[]
+      ~typ:x_type
+      ~resolve:resolve_x
+    ;
+  ])
+)
+
 let of_unexpected error = {
   code = Code.Internal_server_error;
   message = "An unexpected error occurred: " ^ (Exn.to_string error);

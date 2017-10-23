@@ -46,21 +46,10 @@ let payload = Schema.(obj "PutAliasPayload"
   ])
 )
 
-let payload_or_error = Schema.(
-  obj "PutAliasPayloadOrError"
-  ~fields:(fun put_alias_payload_or_error -> [
-    field "error"
-      ~args:Arg.[]
-      ~typ:Error.error
-      ~resolve:(fun () p -> p.error)
-    ;
-    field "payload"
-      ~args:Arg.[]
-      ~typ:payload
-      ~resolve:(fun () p -> p.payload)
-    ;
-  ])
-)
+let payload_or_error = Error.make_x_or_error "PutAliasPayloadOrError"
+  ~x_name:"payload" ~x_type:payload
+  ~resolve_error:(fun () p -> p.error)
+  ~resolve_x:(fun () p -> p.payload)
 
 let resolver db_connection = fun () () { name; url; client_mutation_id; }
 -> DB.(Model.(Error.(
