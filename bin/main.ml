@@ -1,14 +1,9 @@
 
-open Core
-open Str
-
 open Lwt
 
-open Lib.Common.Ext_list
-
 module DB = Lib.DB
-module Schema = Lib.Schema
 module Gql = Graphql_lwt
+module Schema = Lib.Schema
 
 
 let schema db_connection = Gql.Schema.(Schema.(schema [
