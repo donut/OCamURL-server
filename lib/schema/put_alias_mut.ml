@@ -77,7 +77,7 @@ let resolver db_conn = fun () () { name; url; client_mutation_id; }
     Lwt.return { error = None; payload = Some { alias; client_mutation_id; }; }
   )
   (fun exn -> 
-    Lwt.return { error = Some (of_exception exn); payload = None; })
+    Lwt.return { error = Some (of_exn exn); payload = None; })
   )
 ))
 

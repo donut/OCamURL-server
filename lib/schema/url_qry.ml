@@ -14,6 +14,6 @@ let field db_conn = Schema.(io_field "url"
       DB.Select.url_of_alias db_conn name >>= fun url ->
       Lwt.return { error = None; url; })
     (fun exn ->
-      Lwt.return { error = Some (Error.of_exception exn); url = None; })
+      Lwt.return { error = Some (Error.of_exn exn); url = None; })
   ))
 )

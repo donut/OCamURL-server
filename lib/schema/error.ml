@@ -55,6 +55,6 @@ let of_unexpected error = {
   message = "An unexpected error occurred: " ^ (Exn.to_string error);
 }
   
-let of_exception = function
+let of_exn = function
   | E (code, message) -> { code; message; }
   | e -> of_unexpected e
