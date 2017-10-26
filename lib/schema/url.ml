@@ -84,6 +84,11 @@ let url = Model.Url.(Schema.(obj "URL"
       ~typ:string
       ~resolve:(fun () p -> Opt.map p.fragment Fragment.to_string)
     ;
+    field "asString"
+      ~args:Arg.[]
+      ~typ:(non_null string)
+      ~resolve:(fun () p -> to_string p)
+    ;
   ])
 ))
 
