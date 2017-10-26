@@ -1,5 +1,6 @@
 
 open Graphql_lwt
+open Lwt.Infix
 
 module DB = Lib_db
 module Model = Lib_model
@@ -51,37 +52,39 @@ let payload_or_error = Error.make_x_or_error "PutAliasPayloadOrError"
   ~resolve_error:(fun () p -> p.error)
   ~resolve_x:(fun () p -> p.payload)
 
-let resolver db_connection = fun () () { name; url; client_mutation_id; }
+let resolver db_conn = fun () () { name; url; client_mutation_id; }
 -> DB.(Model.(Error.(
-  try (
-    match Select.id_of_alias db_connection name with
-      | Some id ->
-        raise (E (Code.Bad_request, "The alias '" ^ name ^ "' already exists."))
-      | None -> ();
+  Lwt.catch (fun () -> 
+    Select.id_of_alias db_conn name >>= function
+    | Some id -> Lwt.fail
+      (E (Code.Bad_request, "The alias '" ^ name ^ "' already exists."))
+    | None ->
 
-    let id_of = Select.id_of_url db_connection in
-    let url_id = match id_of url with
-      | Some id -> id
-      | None ->  
-        Insert.url db_connection url;
-        match id_of url with 
-        | Some id -> id
-        | None -> raise (E (Code.Internal_server_error, "Despite inserting the passed URL, it could not be found in the database."))
-    in
-
-    let url' = { url with id = Some (Url.ID.of_int url_id) } in
+    let id_of = Select.id_of_url db_conn in
+    id_of url >>= (function
+      | Some id -> Lwt.return id
+      | None ->
+        Insert.url db_conn url >>= fun () -> id_of url >>= function
+        | Some id -> Lwt.return id
+        | None -> Lwt.fail
+          (E (Code.Internal_server_error, "Despite inserting the passed URL, it could not be found in the database."))
+    ) >>= fun id ->
+    
+    let url' = { url with id = Some (Url.ID.of_int id) } in
     let alias = Alias.({ name = Name.of_string name; url = url' }) in
-    Insert.alias db_connection alias;
+    Insert.alias db_conn alias >>= fun () ->
 
-    { error = None; payload = Some { alias; client_mutation_id; }; }
+    Lwt.return { error = None; payload = Some { alias; client_mutation_id; }; }
   )
-  with e -> { error = Some (of_exception e); payload = None; }
-)))
+  (fun exn -> 
+    Lwt.return { error = Some (of_exception exn); payload = None; })
+  )
+))
 
-let field db_connection = Schema.(field "putAlias"
+let field db_conn = Schema.(io_field "putAlias"
   ~typ:(non_null payload_or_error)
   ~args:Arg.[
     arg "input" ~typ:(non_null input);
   ]
-  ~resolve:(resolver db_connection)
+  ~resolve:(resolver db_conn)
 )

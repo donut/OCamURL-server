@@ -1,4 +1,5 @@
 
+open Lwt.Infix
 open Printf
 
 let string_of_value = function 
@@ -16,44 +17,47 @@ let string_of_value = function
       (Mdb.Time.second t)
   | `Null -> sprintf "NULL"
 
-let print_row row =
-  let module M = Mariadb.Blocking in
-  printf "---\n%!";
-  M.Row.StringMap.iter
-    (fun name field ->
-      printf "%20s " name;
-      match M.Field.value field with
-      | `Int i -> printf "%d\n%!" i
-      | `Float x -> printf "%f\n%!" x
-      | `String s -> printf "%s\n%!" s
-      | `Bytes b -> printf "%s\n%!" "Bytes! :)"
-      | `Time t ->
-          printf "%04d-%02d-%02d %02d:%02d:%02d\n%!"
-            (M.Time.year t)
-          (M.Time.month t)
-          (M.Time.day t)
-          (M.Time.hour t)
-          (M.Time.minute t)
-          (M.Time.second t)
-    | `Null -> printf "NULL\n%!")
-  row
+let or_die where = function
+  | Ok r -> Lwt.return r
+  | Error (i, e) -> Lwt.fail_with @@ sprintf "%s: (%d) %s" where i e
 
+let print_row row =
+  Lwt_io.printf "---\n%!" >>= fun () ->
+  Mdb.Row.StringMap.fold
+    (fun name field _ ->
+      Lwt_io.printf "%20s " name >>= fun () ->
+      match Mdb.Field.value field with
+      | `Int i -> Lwt_io.printf "%d\n%!" i
+      | `Float x -> Lwt_io.printf "%f\n%!" x
+      | `String s -> Lwt_io.printf "%s\n%!" s
+      | `Bytes b -> Lwt_io.printf "%s\n%!" (Bytes.to_string b)
+      | `Time t ->
+          Lwt_io.printf "%04d-%02d-%02d %02d:%02d:%02d\n%!"
+            (Mdb.Time.year t)
+            (Mdb.Time.month t)
+            (Mdb.Time.day t)
+            (Mdb.Time.hour t)
+            (Mdb.Time.minute t)
+            (Mdb.Time.second t)
+      | `Null -> Lwt_io.printf "NULL\n%!")
+    row
+  Lwt.return_unit
 
 let stream res =
-  let module M = Mariadb.Blocking in
-  let module F = struct exception E of M.error end in
   let next _ =
-    match M.Res.fetch (module M.Row.Map) res with
-    | Ok (Some _ as row) -> row
-    | Ok None -> None
-    | Error e -> raise (F.E e) in
-  try Ok (Stream.from next)
-  with F.E e -> Error e
+    Mdb.Res.fetch (module Mdb.Row.Map) res
+    >>= function
+      | Ok (Some _ as row) -> Lwt.return row
+      | Ok None -> Lwt.return_none
+      | Error _ -> Lwt.return_none in
+  Lwt.return (Lwt_stream.from next)
 
-let or_die where = function
-  | Ok x -> x
-  | Error (num, msg) -> failwith @@ sprintf "%s #%d: %s" where num msg 
-
+let execute_query conn query values yield =
+  Mdb.prepare conn query >>= or_die "prepare" >>= fun stmt ->
+  Mdb.Stmt.execute stmt values >>= or_die "exec" >>=
+  yield >>= fun return -> 
+  Mdb.Stmt.close stmt >>= or_die "stmt close" >>= fun () ->
+  Lwt.return return
 
 let maybe_string transform maybe = match maybe with
   | None -> `Null
@@ -62,14 +66,6 @@ let maybe_string transform maybe = match maybe with
 let maybe_int transform maybe = match maybe with
   | None -> `Null
   | Some s -> `Int (transform s)
-
-
-let execute_query connection query values yield =
-  let stmt = Mdb.prepare connection query |> or_die "prepare" in
-  let result = Mdb.Stmt.execute stmt values |> or_die "execute" in
-  let return = yield result in
-  Mdb.Stmt.close stmt |> or_die "close statement";
-  return
 
 let alias_fields = [
   "name"; "url";
