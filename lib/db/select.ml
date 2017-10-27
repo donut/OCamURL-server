@@ -7,13 +7,9 @@ open Util
 
 exception ID_not_int
 
-let first_row_of_result r =
-  Lwt.catch (fun () -> match r with
-    | None -> Lwt.return_none
-    | Some res -> stream res >>= Lwt_stream.next >>= fun r -> Lwt.return_some r)
-  (function
-    | Lwt_stream.Empty -> Lwt.return_none
-    | exn -> Lwt.fail exn)
+let first_row_of_result = function
+  | None -> Lwt.return_none
+  | Some res -> stream res >>= stream_next_opt >>= Lwt.return
 
 let id_of_first_row result =
   let exception ID_not_int in

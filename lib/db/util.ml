@@ -47,10 +47,17 @@ let stream res =
   let next _ =
     Mdb.Res.fetch (module Mdb.Row.Map) res
     >>= function
-      | Ok (Some _ as row) -> Lwt.return row
-      | Ok None -> Lwt.return_none
-      | Error _ -> Lwt.return_none in
+    | Ok (Some _ as row) -> Lwt.return row
+    | Ok None -> Lwt.return_none
+    | Error _ -> Lwt.return_none in
   Lwt.return (Lwt_stream.from next)
+
+let stream_next_opt s =
+  Lwt.catch
+    (fun () -> Lwt_stream.next s >>= Lwt.return_some)
+    (function
+      | Lwt_stream.Empty -> Lwt.return_none
+      | exn -> Lwt.fail exn)
 
 let execute_query conn query values yield =
   Mdb.prepare conn query >>= or_die "prepare" >>= fun stmt ->
