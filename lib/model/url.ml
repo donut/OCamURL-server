@@ -1,7 +1,7 @@
 
 
 open Lib_common
-open Lib_common.Option
+open Lib_common.Ext_option
 
 module Scheme : sig
   type t = HTTP | HTTPS

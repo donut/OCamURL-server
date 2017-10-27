@@ -1,7 +1,7 @@
 
 module Convertable = Convertable
 module Ext_list = Ext_list
-module Option = Option
+module Ext_option = Ext_option
 
 let ( <% ) l r x = x |> r |> l
 let ( %> ) l r x = x |> l |> r
