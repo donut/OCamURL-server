@@ -71,7 +71,11 @@ let resolver db_conn = fun () () { name; url; client_mutation_id; }
     ) >>= fun id ->
     
     let url' = { url with id = Some (Url.ID.of_int id) } in
-    let alias = Alias.({ name = Name.of_string name; url = url' }) in
+    let alias = Alias.({
+      name = Name.of_string name;
+      url = url';
+      disabled = Disabled.of_bool false;
+    }) in
     Insert.alias db_conn alias >>= fun () ->
 
     Lwt.return { error = None; payload = Some { alias; client_mutation_id; }; }

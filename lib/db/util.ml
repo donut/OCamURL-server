@@ -75,7 +75,7 @@ let maybe_int transform maybe = match maybe with
   | Some s -> `Int (transform s)
 
 let alias_fields = [
-  "name"; "url";
+  "name"; "url"; "disabled";
 ]
 
 exception URL_missing_ID
