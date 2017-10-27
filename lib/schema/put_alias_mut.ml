@@ -74,7 +74,7 @@ let resolver db_conn = fun () () { name; url; client_mutation_id; }
     let alias = Alias.({
       name = Name.of_string name;
       url = url';
-      disabled = Disabled.of_bool false;
+      status = Status.Enabled;
     }) in
     Insert.alias db_conn alias >>= fun () ->
 

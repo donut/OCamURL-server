@@ -42,9 +42,13 @@ let id_of_url connection url =
 
 let aliases_of_url db_conn url_id =
   let query =
-    "SELECT name FROM alias WHERE disabled = 0 AND url = ? ORDER BY name ASC" in
+    "SELECT name FROM alias WHERE status = ? AND url = ? ORDER BY name ASC" in
+  let values = Alias.([|
+    `String Status.(to_string Enabled);
+    `Int url_id;
+  |]) in
 
-  execute_query db_conn query [| `Int url_id |] (function
+  execute_query db_conn query values (function
   | None -> Lwt.return []
   | Some result -> stream result >>= 
     Lwt_stream.map (fun row -> string_of_map row "name") %> 

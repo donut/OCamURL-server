@@ -75,7 +75,7 @@ let maybe_int transform maybe = match maybe with
   | Some s -> `Int (transform s)
 
 let alias_fields = [
-  "name"; "url"; "disabled";
+  "name"; "url"; "status";
 ]
 
 exception URL_missing_ID
@@ -87,7 +87,8 @@ let values_of_alias (alias:Lib_model.Alias.t) =
   in
   Lib_model.Alias.([|
    `String (Name.to_string alias.name);
-   `Int id
+   `Int id;
+   `String (Status.to_string alias.status);
   |])
 
 let url_fields = [
