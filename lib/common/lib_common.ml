@@ -7,4 +7,3 @@ let ( <% ) l r x = x |> r |> l
 let ( %> ) l r x = x |> l |> r
 
 let flip f a b = f b a
-let id x = x
