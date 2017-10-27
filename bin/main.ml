@@ -7,6 +7,7 @@ module Schema = Lib.Schema
 
 
 let schema db_conn = Gql.Schema.(Schema.(schema [
+    Aliases_qry.field db_conn;
     Url_qry.field db_conn;
   ]
   ~mutations:[

@@ -40,6 +40,18 @@ let id_of_url connection url =
   in 
   execute_query connection query (Array.of_list values') id_of_first_row
 
+let aliases_of_url db_conn url_id =
+  let query =
+    "SELECT name FROM alias WHERE disabled = 0 AND url = ? ORDER BY name ASC" in
+
+  execute_query db_conn query [| `Int url_id |] (function
+  | None -> Lwt.return []
+  | Some result -> stream result >>= 
+    Lwt_stream.map (fun row -> string_of_map row "name") %> 
+    Lwt_stream.to_list >>= 
+    Lwt.return
+  )
+
 let url_of_alias db_conn name =
   let fields = "id" :: url_fields in
   let select = fields
