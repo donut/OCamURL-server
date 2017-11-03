@@ -16,11 +16,12 @@ let schema db_conn = Gql.Schema.(Schema.(schema [
 ))
 
 let main () =
-  let db_connect =
-    DB.connect ~host:"localhost" ~user:"root" ~pass:"" ~db:"rtmDOTtv" in
-    
-  db_connect () >>= DB.or_die "connect" >>= fun db_conn ->
+  DB.connect
+    ~host:"localhost" ~user:"root" ~pass:"" ~db:"rtmDOTtv" ()
+    >>= DB.or_die "connect" >>= fun db_conn ->
+
   Gql.Server.start ~ctx:(fun () -> ()) (schema db_conn) >>= fun () ->
+
   DB.close db_conn
 
 let () =

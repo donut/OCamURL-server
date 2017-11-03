@@ -20,7 +20,7 @@ let use = Model.Use.(Graphql_lwt.Schema.(obj "Use"
     field "url"
       ~args:Arg.[]
       ~typ:(non_null Url.url)
-      ~resolve:(fun () p-> p.url)
+      ~resolve:(fun () p -> p.url)
     ;
     field "referer"
       ~args:Arg.[]
