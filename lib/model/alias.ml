@@ -17,6 +17,6 @@ end
 
 type t = {
   name: Name.t;
-  url: Url.t;
+  url: Url.or_id;
   status: Status.t;
 }

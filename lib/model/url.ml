@@ -82,6 +82,8 @@ type t = {
   fragment: Fragment.t option;
 }
 
+type or_id = URL of t | ID of ID.t
+
 let to_string url =
   let opt_to_str maybe prefix to_string =
     (maybe, (^) prefix <% to_string) =!?: lazy "" in

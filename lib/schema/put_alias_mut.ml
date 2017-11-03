@@ -32,11 +32,11 @@ let input = Schema.Arg.(obj "PutAliasInput"
   ]
 )
 
-let payload = Schema.(obj "PutAliasPayload"
+let payload db_conn = Schema.(obj "PutAliasPayload"
   ~fields:(fun payload -> [
     field "alias"
       ~args:Arg.[]
-      ~typ:(non_null Alias.alias)
+      ~typ:(non_null (Alias.alias db_conn))
       ~resolve:(fun () p -> p.alias)
     ;
     field "clientMutationId"
@@ -47,8 +47,8 @@ let payload = Schema.(obj "PutAliasPayload"
   ])
 )
 
-let payload_or_error = Error.make_x_or_error "PutAliasPayloadOrError"
-  ~x_name:"payload" ~x_type:payload
+let payload_or_error db_conn = Error.make_x_or_error "PutAliasPayloadOrError"
+  ~x_name:"payload" ~x_type:(payload db_conn)
   ~resolve_error:(fun () p -> p.error)
   ~resolve_x:(fun () p -> p.payload)
 
@@ -73,7 +73,7 @@ let resolver db_conn = fun () () { name; url; client_mutation_id; }
     let url' = { url with id = Some (Url.ID.of_int id) } in
     let alias = Alias.({
       name = Name.of_string name;
-      url = url';
+      url = Model.Url.URL url';
       status = Status.Enabled;
     }) in
     Insert.alias db_conn alias >>= fun () ->
@@ -86,7 +86,7 @@ let resolver db_conn = fun () () { name; url; client_mutation_id; }
 ))
 
 let field db_conn = Schema.(io_field "putAlias"
-  ~typ:(non_null payload_or_error)
+  ~typ:(non_null (payload_or_error db_conn))
   ~args:Arg.[
     arg "input" ~typ:(non_null input);
   ]

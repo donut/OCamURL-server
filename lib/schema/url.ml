@@ -1,8 +1,10 @@
 
 open Graphql_lwt
+open Lwt.Infix
 
-module Opt = Core.Option
+module DB = Lib_db
 module Model = Lib_model
+module Opt = Core.Option
 
 let scheme_values = Model.Url.Scheme.(Schema.([
     enum_value "http" ~value:HTTP;
@@ -126,3 +128,13 @@ let input name = Schema.Arg.(obj name
     arg  "params" ~typ:(list (non_null param_input));
     arg  "fragment" ~typ:string;
   ])
+
+
+exception URL_missing of int
+
+let or_id_resolver db_conn = Model.Url.(function
+  | URL url -> Lwt.return url
+  | ID id -> DB.Select.url_by_id db_conn (ID.to_int id) >>= function
+    | Some url -> Lwt.return url
+    | None -> Lwt.fail (URL_missing (ID.to_int id))
+)

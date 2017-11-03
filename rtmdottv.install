@@ -5,3 +5,6 @@ lib: [
 bin: [
   "_build/install/default/bin/RTMDotTV" {"RTMDotTV"}
 ]
+doc: [
+  "_build/install/default/doc/rtmdottv/README.md"
+]

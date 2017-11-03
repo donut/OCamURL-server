@@ -5,7 +5,7 @@ module Opt = Core.Option
 module Model = Lib_model
 
 
-let use = Model.Use.(Graphql_lwt.Schema.(obj "Use"
+let use db_conn = Model.Use.(Schema.(obj "Use"
   ~fields:(fun use -> [
     field "id"
       ~args:Arg.[]
@@ -14,7 +14,7 @@ let use = Model.Use.(Graphql_lwt.Schema.(obj "Use"
     ;
     field "alias"
       ~args:Arg.[]
-      ~typ:(non_null Alias.alias)
+      ~typ:(non_null (Alias.alias db_conn))
       ~resolve:(fun () p -> p.alias)
     ;
     field "url"
