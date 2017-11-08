@@ -11,7 +11,7 @@ let schema db_conn = Gql.Schema.(Schema.(schema [
     Url_qry.field db_conn;
   ]
   ~mutations:[
-    Put_alias_mut.field db_conn;
+    Add_alias_mut.field db_conn;
   ]
 ))
 

@@ -21,18 +21,18 @@ type payload_or_error = {
   payload: payload option;
 }
 
-let input = Schema.Arg.(obj "PutAliasInput"
+let input = Schema.Arg.(obj "AddAliasInput"
   ~coerce:(fun name url client_mutation_id ->
     { name; url; client_mutation_id; }    
   )
   ~fields:[
     arg "name" ~typ:(non_null string);
-    arg "url" ~typ:(non_null (Url.input "PutAliasURLInput"));
+    arg "url" ~typ:(non_null (Url.input "AddAliasURLInput"));
     arg "clientMutationId" ~typ:(non_null string);
   ]
 )
 
-let payload db_conn = Schema.(obj "PutAliasPayload"
+let payload db_conn = Schema.(obj "AddAliasPayload"
   ~fields:(fun payload -> [
     field "alias"
       ~args:Arg.[]
@@ -47,7 +47,7 @@ let payload db_conn = Schema.(obj "PutAliasPayload"
   ])
 )
 
-let payload_or_error db_conn = Error.make_x_or_error "PutAliasPayloadOrError"
+let payload_or_error db_conn = Error.make_x_or_error "AddAliasPayloadOrError"
   ~x_name:"payload" ~x_type:(payload db_conn)
   ~resolve_error:(fun () p -> p.error)
   ~resolve_x:(fun () p -> p.payload)
@@ -85,7 +85,7 @@ let resolver db_conn = fun () () { name; url; client_mutation_id; }
   )
 ))
 
-let field db_conn = Schema.(io_field "putAlias"
+let field db_conn = Schema.(io_field "addAlias"
   ~typ:(non_null (payload_or_error db_conn))
   ~args:Arg.[
     arg "input" ~typ:(non_null input);
