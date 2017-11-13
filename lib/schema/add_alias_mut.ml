@@ -60,16 +60,7 @@ let resolver db_conn = fun () () { name; url; client_mutation_id; }
       (E (Code.Bad_request, "The alias '" ^ name ^ "' already exists."))
     | None ->
 
-    let id_of = Select.id_of_url db_conn in
-    id_of url >>= (function
-      | Some id -> Lwt.return id
-      | None ->
-        Insert.url db_conn url >>= fun () -> id_of url >>= function
-        | Some id -> Lwt.return id
-        | None -> Lwt.fail
-          (E (Code.Internal_server_error, "Despite inserting the passed URL, it could not be found in the database."))
-    ) >>= fun id ->
-    
+    Insert.url_if_missing db_conn url >>= fun id ->
     let url' = { url with id = Some (Url.ID.of_int id) } in
     let alias = Alias.({
       name = Name.of_string name;

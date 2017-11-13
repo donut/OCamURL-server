@@ -2,6 +2,8 @@
 open Lwt.Infix
 open Printf
 
+let lwt_unit _ = Lwt.return_unit
+
 let string_of_value = function 
   | `Int i -> sprintf "int (%d)" i
   | `Float x -> sprintf "float (%f)" x
