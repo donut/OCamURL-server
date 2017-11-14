@@ -71,7 +71,7 @@ let generate_name_from_int int =
       list and store in DB.
   *)
   let alphabet = 
-    "621coIKZhSEn8rwsq0eg5~QfBWpNV4u.iDyvzMadTtYkGm3FxjO_9HL7CJAb-XPRlU" in
+    "621coIKZhSEn8rwsq0eg5QfBWpNV4uiDyvzMadTtYkGm3FxjO_9HL7CJAb-XPRlU" in
   let base = String.length alphabet in
   let char_list = chars_of_string alphabet in
 
