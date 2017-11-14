@@ -52,8 +52,8 @@ let payload_or_error db_conn = Error.make_x_or_error "AddAliasPayloadOrError"
   ~resolve_error:(fun () p -> p.error)
   ~resolve_x:(fun () p -> p.payload)
 
-let resolver db_conn = fun () () { name; url; client_mutation_id; }
--> DB.(Model.(Error.(
+let resolver db_conn () () { name; url; client_mutation_id; } =
+DB.(Model.(Error.(
   Lwt.catch (fun () -> 
     Select.id_of_alias db_conn name >>= function
     | Some id -> Lwt.fail

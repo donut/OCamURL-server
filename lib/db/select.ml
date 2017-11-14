@@ -47,6 +47,16 @@ let alias_of_row row = Alias.({
   status = string_of_map row "status" |> Status.of_string;
 })
 
+let alias_by_name db_conn name =
+  let fields = alias_fields |> String.concat ", " in
+  let query = "SELECT " ^ fields ^ " FROM alias "
+            ^ "WHERE name = ? LIMIT 1" in
+  execute_query db_conn query [| `String name |] (first_row_of_result)
+  >>= function
+  | None -> Lwt.return_none
+  | Some row -> Lwt.return_some (alias_of_row row)
+
+
 let aliases_of_url db_conn url_id =
   let fields = alias_fields |> String.concat ", " in
   let query = "SELECT " ^ fields ^ " FROM alias "
