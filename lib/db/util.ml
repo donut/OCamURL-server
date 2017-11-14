@@ -84,10 +84,10 @@ exception URL_missing_ID
 
 let values_of_alias (alias:Lib_model.Alias.t) =
   let id = Lib_model.Url.(match alias.url with 
-    | ID id -> ID.to_int id
-    | URL url -> match url.id with
-      | None -> raise URL_missing_ID
-      | Some id -> ID.to_int id) in
+    | ID id
+    | URL { id = Some id } -> ID.to_int id
+    | URL { id = None } -> raise URL_missing_ID
+  ) in
 
   Lib_model.Alias.([|
    `String (Name.to_string alias.name);
