@@ -1,3 +1,19 @@
 ### Known Issues ###
 
-* Concurrent MariaDB queries will break with a "Commands out of sync" error. See [ocaml-mariadb issue #12](https://github.com/andrenth/ocaml-mariadb/issues/12).
+#### Commands out of sync ####
+Concurrent MariaDB queries will break with a "Commands out of sync" error. See [ocaml-mariadb issue #12](https://github.com/andrenth/ocaml-mariadb/issues/12).
+
+#### Parameter count mismatch ####
+In `Lib.Schema.Generate_alias_mut.insert_alias_with_unique_name` runs into
+an error when trying to insert a duplicate name:
+  
+> Failure "exec: (0) parameter count mismatch"
+
+I'm not sure exactly what causes it, but if in `generate_name` of the same
+module has `Unix.gettimeofday` changed to `Unix.time` and the `generateAlias`
+endpoint is queried consecutive times very quickly (maybe within a second,
+before `Unix.time` returns something different than the previous query)
+this error shows up.
+
+I've tried reproducing it in a context outside of this GraphQL app, but have
+not had success yet.
