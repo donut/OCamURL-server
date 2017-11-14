@@ -15,3 +15,11 @@ let alias_status db_conn name status =
 		`String name;
 	|] in
 	execute_query db_conn query values lwt_unit
+
+let alias_url db_conn name url_id =
+	let query = "UPDATE alias SET url = ? WHERE name = ? LIMIT 1" in
+	let values = [|
+		`Int url_id;
+		`String name;
+	|] in
+	execute_query db_conn query values lwt_unit
