@@ -7,18 +7,18 @@ module DB = Lib_db
 module Model = Lib_model
 
 type input = {
-	name: string;
-	client_mutation_id: string;
+  name: string;
+  client_mutation_id: string;
 }
 
 type payload = {
-	alias: Model.Alias.t;
-	client_mutation_id: string;
+  alias: Model.Alias.t;
+  client_mutation_id: string;
 }
 
 type payload_or_error = {
-	error: Error.t option;
-	payload: payload option;
+  error: Error.t option;
+  payload: payload option;
 }
 
 let input = Schema.Arg.(obj "DisableAliasInput"
@@ -52,25 +52,21 @@ let payload_or_error db_conn = Error.make_x_or_error "DisableAliasPayloadOrError
   ~resolve_x:(fun () p -> p.payload)
 
 let resolver db_conn () () { name; client_mutation_id; } = DB.(Model.(Error.(
-	Lwt.catch
-	(fun () ->
-		Update.alias_status db_conn name Alias.Status.Disabled >>= fun () ->
-		Select.alias_by_name db_conn name >>= function
-		| None -> Lwt.return {
-				error = Some {
-					code = Code.Bad_request;
-					message = sprintf "The passed alias '%s' doesn't exist." name;
-				};
-				payload = None;
-			}
-		| Some alias -> Lwt.return {
-				error = None;
-				payload = Some { alias; client_mutation_id; }
-			}
-	)
-	(fun exn ->
-		Lwt.return { error = Some (of_exn exn); payload = None; }
-	)
+  Lwt.catch
+  (fun () ->
+    Update.alias_status db_conn name Alias.Status.Disabled >>= fun () ->
+    Select.alias_by_name db_conn name >>= function
+    | None ->
+      raise (E (Code.Bad_request,
+                sprintf "The passed alias '%s' does not exist." name))
+    | Some alias -> Lwt.return {
+      error = None;
+      payload = Some { alias; client_mutation_id; }
+    }
+  )
+  (fun exn ->
+    Lwt.return { error = Some (of_exn exn); payload = None; }
+  )
 )))
 
 let field db_conn = Schema.(io_field "disableAlias"

@@ -56,13 +56,9 @@ let resolver db_conn () () { name; client_mutation_id; } = DB.(Model.(Error.(
 	(fun () ->
 		Update.alias_status db_conn name Alias.Status.Enabled >>= fun () ->
 		Select.alias_by_name db_conn name >>= function
-		| None -> Lwt.return {
-				error = Some {
-					code = Code.Bad_request;
-					message = sprintf "The passed alias '%s' doesn't exist." name;
-				};
-				payload = None;
-			}
+		| None ->
+      raise (E (Code.Bad_request,
+                sprintf "The passed alias '%s' does not exist." name))
 		| Some alias -> Lwt.return {
 				error = None;
 				payload = Some { alias; client_mutation_id; }
