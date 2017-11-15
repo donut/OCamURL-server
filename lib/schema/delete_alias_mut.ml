@@ -68,7 +68,7 @@ DB.(Model.(Error.(
     Select.id_of_alias db_conn name >>= function
     | None ->
       raise (E (Code.Bad_request,
-								sprintf "The alias '%s' does not exist." name))
+								sprintf "The alias [%s] does not exist." name))
     | Some _ -> 
 
 		Select.use_count_of_alias db_conn name >>= (function

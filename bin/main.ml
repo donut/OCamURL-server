@@ -17,6 +17,7 @@ let schema db_conn = Gql.Schema.(Schema.(schema [
     Disable_alias_mut.field db_conn;
     Enable_alias_mut.field db_conn;
     Generate_alias_mut.field db_conn;
+    Rename_alias_mut.field db_conn;
   ]
 ))
 
