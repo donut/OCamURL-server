@@ -95,7 +95,6 @@ let url_by_id db_conn id =
   Lwt_io.printlf "Getting URL by ID %d" id >>= fun () ->
   execute_query db_conn query [| `Int id |] url_of_first_row
 
-
 let url_of_alias db_conn name =
   let fields = "id" :: url_fields in
   let select = fields
@@ -108,3 +107,18 @@ let url_of_alias db_conn name =
      ^ "ORDER BY url.id LIMIT 1" in
 
   execute_query db_conn query [| `String name |] url_of_first_row
+
+let count_of_first_row result =
+  let exception Count_not_int in
+  first_row_of_result result >>= function
+  | None -> Lwt.return 0
+  | Some row ->
+    match row |> Mdb.Row.StringMap.find "count" |> Mdb.Field.value with
+    | `Int count -> Lwt.return count
+    | _ -> Lwt.fail Count_not_int
+
+let use_count_of_alias db_conn name =
+  let query = "SELECT COUNT(u.id) AS count FROM `use` AS u "
+            ^ "JOIN alias ON alias.id = u.alias "
+            ^ "WHERE alias.name = ?" in
+  execute_query db_conn query [| `String name |] count_of_first_row

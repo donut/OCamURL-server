@@ -1,6 +1,7 @@
 
 include Util
 
+module Delete = Delete
 module Insert = Insert
 module Select = Select
 module Update = Update
