@@ -36,8 +36,8 @@ let input = Schema.Arg.(obj "DeleteAliasInput"
 )
 
 let action = Schema.(enum "DeleteAliasAction" ~values:[
-	enum_value "delete" ~value:Delete;
-	enum_value "disable" ~value:Disable;
+	enum_value "DELETE" ~value:Delete;
+	enum_value "DISABLE" ~value:Disable;
 ])
 
 let payload db_conn = Schema.(obj "DeleteAliasPayload"

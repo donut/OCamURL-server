@@ -7,8 +7,8 @@ module Model = Lib_model
 module Opt = Core.Option
 
 let scheme_values = Model.Url.Scheme.(Schema.([
-    enum_value "http" ~value:HTTP;
-    enum_value "https" ~value:HTTPS;
+    enum_value "HTTP" ~value:HTTP;
+    enum_value "HTTPS" ~value:HTTPS;
 ]))
 
 let scheme = Schema.(enum "URLScheme" ~values:scheme_values)
