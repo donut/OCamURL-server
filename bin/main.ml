@@ -1,12 +1,13 @@
 
 open Lwt.Infix
 
+module Conf = Lib.Config
 module DB = Lib.DB
 module Gql = Graphql_lwt
 module Schema = Lib.Schema
 
 
-let schema db_conn = Gql.Schema.(Schema.(schema [
+let schema db_conn (config:Conf.Api_t.t) = Gql.Schema.(Schema.(schema [
     Aliases_qry.field db_conn;
     Url_qry.field db_conn;
   ]
@@ -16,19 +17,25 @@ let schema db_conn = Gql.Schema.(Schema.(schema [
     Delete_alias_mut.field db_conn;
     Disable_alias_mut.field db_conn;
     Enable_alias_mut.field db_conn;
-    Generate_alias_mut.field db_conn;
+    Generate_alias_mut.field db_conn config.alias_alphabet;
     Rename_alias_mut.field db_conn;
   ]
 ))
 
-let main () =
+let main (config:Conf.Api_t.t) =
+  let db = config.database in
   DB.connect
-    ~host:"localhost" ~user:"root" ~pass:"" ~db:"rtmDOTtv" ()
+    ~host:db.host ~user:db.user ~pass:db.pass ~db:db.database ()
     >>= DB.or_die "connect" >>= fun db_conn ->
 
-  Gql.Server.start ~ctx:(fun () -> ()) (schema db_conn) >>= fun () ->
+  Gql.Server.start ~port:config.port ~ctx:(fun () -> ()) (schema db_conn config)
+  >>= fun () ->
 
   DB.close db_conn
 
 let () =
-   Lwt_main.run @@ main ()
+  Core.Command.run @@ Lib.Config.(
+    Cli.start_api_command Api_j.t_of_string (fun config ->
+      Lwt_main.run @@ main config
+    )
+  )

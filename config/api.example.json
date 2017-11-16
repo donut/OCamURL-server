@@ -1,0 +1,11 @@
+{
+	"port": 8080,
+	"database": {
+		"host": "localhost",
+		"user": "root",
+		"pass": "",
+		"database": "example"
+	},
+	"alias_alphabet":  
+		"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-~_."
+}

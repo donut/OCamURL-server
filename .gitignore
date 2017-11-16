@@ -29,3 +29,7 @@ setup.log
 
 # Merlin configuring file for Vim and Emacs
 .merlin
+
+# Project configs
+config/*.json
+!config/*.example.json
