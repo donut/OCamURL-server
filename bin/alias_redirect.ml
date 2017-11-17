@@ -40,12 +40,16 @@ let alias_of_path path = String.(
 		path
 )
 
-let router db_conn conn (req:Cohttp.Request.t) body = Cohttp.(
+let router db_conn pathless_redirect_uri =
+Cohttp.(fun conn (req:Request.t) body ->
 	ignore @@ Lwt_io.printf "Req: %s\n" req.resource;
 	let alias = Request.uri req |> Uri.path |> alias_of_path in
 	
 	match req.meth, alias with
-	| `GET, "" -> not_found_response ()
+	| `GET, "" ->
+		(match pathless_redirect_uri with
+		| None -> not_found_response ()
+		| Some uri -> C.Server.respond_redirect ~uri:(Uri.of_string uri) ())
 	| `GET,  _ -> resolve_alias db_conn alias
 	|    _,  _ -> C.Server.respond_string ~status:`Method_not_allowed ~body:""()
 )
@@ -57,7 +61,8 @@ let main (conf:Conf.Alias_redirect.t) =
     >>= DB.or_die "connect" >>= fun db_conn ->
 
 	let mode = `TCP (`Port conf.port) in
-	let server = C.Server.make ~callback:(router db_conn) () in
+	let callback = router db_conn conf.pathless_redirect_uri in
+	let server = C.Server.make ~callback () in
 	C.Server.create ~mode server >>= fun () ->
 
   DB.close db_conn

@@ -3,7 +3,11 @@
 
 type database = Database_t.t
 
-type t = Alias_redirect_t.t = { port: int; database: database }
+type t = Alias_redirect_t.t = {
+  port: int;
+  database: database;
+  pathless_redirect_uri: string option
+}
 
 val write_database :
   Bi_outbuf.t -> database -> unit

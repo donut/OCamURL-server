@@ -3,4 +3,8 @@
 
 type database = Database_t.t
 
-type t = { port: int; database: database }
+type t = {
+  port: int;
+  database: database;
+  pathless_redirect_uri: string option
+}
