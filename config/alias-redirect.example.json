@@ -1,0 +1,9 @@
+{
+	"port": 8080,
+	"database": {
+		"host": "localhost",
+		"user": "root",
+		"pass": "",
+		"database": "example"
+	}
+}

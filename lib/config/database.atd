@@ -1,0 +1,8 @@
+
+type t = {
+	~host <ocaml default="\"localhost\"">: string;
+	~port <ocaml default="3306">: int;
+	~user <ocaml default="\"root\"">: string;
+	~pass <ocaml default="\"\"">: string;
+	database: string;
+}

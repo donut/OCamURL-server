@@ -1,9 +1,9 @@
-(* Auto-generated from "api.atd" *)
+(* Auto-generated from "alias_redirect.atd" *)
 
 
 type database = Database_t.t
 
-type t = Api_t.t = { port: int; database: database; alias_alphabet: string }
+type t = Alias_redirect_t.t = { port: int; database: database }
 
 let write_database = (
   Database_j.write_t
@@ -39,15 +39,6 @@ let write_t : _ -> t -> _ = (
       write_database
     )
       ob x.database;
-    if !is_first then
-      is_first := false
-    else
-      Bi_outbuf.add_char ob ',';
-    Bi_outbuf.add_string ob "\"alias_alphabet\":";
-    (
-      Yojson.Safe.write_string
-    )
-      ob x.alias_alphabet;
     Bi_outbuf.add_char ob '}';
 )
 let string_of_t ?(len = 1024) x =
@@ -60,7 +51,6 @@ let read_t = (
     Yojson.Safe.read_lcurl p lb;
     let field_port = ref (Obj.magic (Sys.opaque_identity 0.0)) in
     let field_database = ref (Obj.magic (Sys.opaque_identity 0.0)) in
-    let field_alias_alphabet = ref (Obj.magic (Sys.opaque_identity 0.0)) in
     let bits0 = ref 0 in
     try
       Yojson.Safe.read_space p lb;
@@ -82,14 +72,6 @@ let read_t = (
             | 8 -> (
                 if String.unsafe_get s pos = 'd' && String.unsafe_get s (pos+1) = 'a' && String.unsafe_get s (pos+2) = 't' && String.unsafe_get s (pos+3) = 'a' && String.unsafe_get s (pos+4) = 'b' && String.unsafe_get s (pos+5) = 'a' && String.unsafe_get s (pos+6) = 's' && String.unsafe_get s (pos+7) = 'e' then (
                   1
-                )
-                else (
-                  -1
-                )
-              )
-            | 14 -> (
-                if String.unsafe_get s pos = 'a' && String.unsafe_get s (pos+1) = 'l' && String.unsafe_get s (pos+2) = 'i' && String.unsafe_get s (pos+3) = 'a' && String.unsafe_get s (pos+4) = 's' && String.unsafe_get s (pos+5) = '_' && String.unsafe_get s (pos+6) = 'a' && String.unsafe_get s (pos+7) = 'l' && String.unsafe_get s (pos+8) = 'p' && String.unsafe_get s (pos+9) = 'h' && String.unsafe_get s (pos+10) = 'a' && String.unsafe_get s (pos+11) = 'b' && String.unsafe_get s (pos+12) = 'e' && String.unsafe_get s (pos+13) = 't' then (
-                  2
                 )
                 else (
                   -1
@@ -117,13 +99,6 @@ let read_t = (
               ) p lb
             );
             bits0 := !bits0 lor 0x2;
-          | 2 ->
-            field_alias_alphabet := (
-              (
-                Ag_oj_run.read_string
-              ) p lb
-            );
-            bits0 := !bits0 lor 0x4;
           | _ -> (
               Yojson.Safe.skip_json p lb
             )
@@ -153,14 +128,6 @@ let read_t = (
                     -1
                   )
                 )
-              | 14 -> (
-                  if String.unsafe_get s pos = 'a' && String.unsafe_get s (pos+1) = 'l' && String.unsafe_get s (pos+2) = 'i' && String.unsafe_get s (pos+3) = 'a' && String.unsafe_get s (pos+4) = 's' && String.unsafe_get s (pos+5) = '_' && String.unsafe_get s (pos+6) = 'a' && String.unsafe_get s (pos+7) = 'l' && String.unsafe_get s (pos+8) = 'p' && String.unsafe_get s (pos+9) = 'h' && String.unsafe_get s (pos+10) = 'a' && String.unsafe_get s (pos+11) = 'b' && String.unsafe_get s (pos+12) = 'e' && String.unsafe_get s (pos+13) = 't' then (
-                    2
-                  )
-                  else (
-                    -1
-                  )
-                )
               | _ -> (
                   -1
                 )
@@ -183,13 +150,6 @@ let read_t = (
                 ) p lb
               );
               bits0 := !bits0 lor 0x2;
-            | 2 ->
-              field_alias_alphabet := (
-                (
-                  Ag_oj_run.read_string
-                ) p lb
-              );
-              bits0 := !bits0 lor 0x4;
             | _ -> (
                 Yojson.Safe.skip_json p lb
               )
@@ -197,12 +157,11 @@ let read_t = (
       done;
       assert false;
     with Yojson.End_of_object -> (
-        if !bits0 <> 0x7 then Ag_oj_run.missing_fields p [| !bits0 |] [| "port"; "database"; "alias_alphabet" |];
+        if !bits0 <> 0x3 then Ag_oj_run.missing_fields p [| !bits0 |] [| "port"; "database" |];
         (
           {
             port = !field_port;
             database = !field_database;
-            alias_alphabet = !field_alias_alphabet;
           }
          : t)
       )

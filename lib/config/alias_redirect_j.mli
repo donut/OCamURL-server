@@ -1,9 +1,9 @@
-(* Auto-generated from "api.atd" *)
+(* Auto-generated from "alias_redirect.atd" *)
 
 
 type database = Database_t.t
 
-type t = Api_t.t = { port: int; database: database; alias_alphabet: string }
+type t = Alias_redirect_t.t = { port: int; database: database }
 
 val write_database :
   Bi_outbuf.t -> database -> unit
