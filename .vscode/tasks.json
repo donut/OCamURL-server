@@ -2,16 +2,17 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"taskName": "build",
+			"label": "build",
 			"type": "shell",
-			"command": "atdgen -t lib/config/*.atd; and atdgen -j lib/config/*.atd; and jbuilder build bin/main.exe",
+			"command":
+				"find . -iname '*.atd' -exec atdgen -t '{}' \\; -exec atdgen -j '{}' \\;; and jbuilder build bin/main.exe",
 			"group": {
 				"kind": "build",
 				"isDefault": true
 			}
 		},
 		{
-			"taskName": "run",
+			"label": "run",
 			"type": "shell",
 			"command": "./_build/default/bin/main.exe",
 			"problemMatcher": [
