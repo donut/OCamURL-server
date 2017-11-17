@@ -2,12 +2,11 @@
 open Core
 
 
-let config_of_file to_config filename callback = 
-	callback @@ Read.config to_config filename
-
-let start_api_command to_config callback = Command.(
+let start_command callback = Command.(
 	basic
-		~summary:"Start the API server."
-		Spec.(empty +> anon ("config" %: file))
-		(fun filename () -> config_of_file to_config filename callback)
+		~summary:"Start a OCamURL server."
+		Spec.(empty
+			+> anon ("service_name" %: string) 
+			+> anon ("config_path" %: file))
+		callback
 )
