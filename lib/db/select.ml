@@ -92,7 +92,6 @@ let url_by_id db_conn id =
   let fields = ("id" :: url_fields) |> String.concat ", " in
   let query = "SELECT " ^ fields ^ " FROM url WHERE id = ? "
             ^ "ORDER BY id ASC LIMIT 1" in
-  Lwt_io.printlf "Getting URL by ID %d" id >>= fun () ->
   execute_query db_conn query [| `Int id |] url_of_first_row
 
 let url_of_alias db_conn name =
