@@ -9,4 +9,5 @@ let () =
   (fun service conf_path () ->
     match service with
     | "api" -> conf_path |> Conf.(of_file API.of_string) |> Api_server.start
+    | "alias-redirect" -> Alias_redirect.start ()
     | x -> printf "There is no service [%s]\n" x)
