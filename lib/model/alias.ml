@@ -22,3 +22,5 @@ type t = {
   url: Url.or_id;
   status: Status.t;
 }
+
+type or_id = Alias of t | ID of ID.t

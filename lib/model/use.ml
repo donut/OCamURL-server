@@ -7,10 +7,10 @@ module IP : Convertable.StringType = Convertable.String
 module Timestamp : Convertable.IntType = Convertable.Int
 
 type t = {
-  id: ID.t;
-  alias: Alias.t;
-  url: Url.t;
-  referer: Url.t option;
+  id: ID.t option;
+  alias: Alias.or_id;
+  url: Url.or_id;
+  referer: Url.or_id option;
   user_agent: UserAgent.t option;
   ip: IP.t;
   timestamp: Timestamp.t;
