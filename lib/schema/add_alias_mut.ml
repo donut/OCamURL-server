@@ -61,15 +61,26 @@ DB.(Model.(Error.(
     | None ->
 
     Insert.url_if_missing db_conn url >>= fun id ->
-    let url' = { url with id = Some (Url.ID.of_int id) } in
+    let url' = { url with id = Some (Url.ID.of_int id); } in
     let alias = Alias.({
+      id = None;
       name = Name.of_string name;
       url = Model.Url.URL url';
       status = Status.Enabled;
     }) in
     Insert.alias db_conn alias >>= fun () ->
 
-    Lwt.return { error = None; payload = Some { alias; client_mutation_id; }; }
+    let exception Missing_just_inserted_alias of string in
+    Select.id_of_alias db_conn name >>= (function
+      | None -> raise (Missing_just_inserted_alias name)
+      | Some id -> Lwt.return id)
+    >>= fun id ->
+
+    let alias' = { alias with id = Some (Alias.ID.of_int id); } in 
+    Lwt.return { 
+      error = None;
+      payload = Some { alias = alias'; client_mutation_id; };
+    }
   )
   (fun exn -> 
     Lwt.return { error = Some (of_exn exn); payload = None; })

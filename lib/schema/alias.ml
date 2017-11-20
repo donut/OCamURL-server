@@ -15,7 +15,15 @@ let alias db_conn = Model.Alias.(Graphql_lwt.Schema.(obj "Alias"
     field "id"
       ~args:Arg.[]
       ~typ:(non_null guid)
-      ~resolve:(fun () a -> Name.to_string a.name)
+      ~resolve:(fun () alias ->
+        let exception Alias_missing_id of string in
+        match alias.id with 
+        | None ->
+          let name = Name.to_string alias.name in
+          ignore @@
+            Lwt_io.printlf "Alias [%s] missing ID when it never should." name;
+          raise (Alias_missing_id name)
+        | Some id -> id |> ID.to_int |> string_of_int)
     ;
     field "name"
       ~args:Arg.[]

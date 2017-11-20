@@ -1,6 +1,7 @@
 
 open Lib_common
 
+module ID : Convertable.IntType = Convertable.Int
 module Name : Convertable.StringType = Convertable.String
 
 module Status = struct
@@ -16,6 +17,7 @@ module Status = struct
 end
 
 type t = {
+  id: ID.t option;
   name: Name.t;
   url: Url.or_id;
   status: Status.t;

@@ -42,6 +42,7 @@ let id_of_url connection url =
   execute_query connection query (Array.of_list values') id_of_first_row
 
 let alias_of_row row = Alias.({
+  id = Some (int_of_map row "id" |> ID.of_int);
   name = string_of_map row "name" |> Name.of_string;
   url = Url.ID (int_of_map row "url" |> Url.ID.of_int);
   status = string_of_map row "status" |> Status.of_string;

@@ -79,7 +79,7 @@ DB.(Model.(Error.(
 									 "`newName` must be different than the current name."))
 		else
 
-		Select.alias_by_name db_conn new_name >>= function
+		Select.id_of_alias db_conn new_name >>= function
 		| Some _ ->
 			raise (E (Code.Bad_request,
 								sprintf "The alias [%s] already exists." new_name))
@@ -97,6 +97,7 @@ DB.(Model.(Error.(
 					Update.alias_status db_conn name Model.Alias.Status.Disabled
 					>>= fun () ->
 					let alias' = Model.Alias.({
+            id = None;
 						name = Name.of_string new_name;
 						url = alias.url;
 						status = Status.Enabled;
