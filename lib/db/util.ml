@@ -77,16 +77,16 @@ let maybe_int transform maybe = match maybe with
   | Some s -> `Int (transform s)
 
 let alias_fields = [
-  "id"; "name"; "url"; "status";
+  "name"; "url"; "status";
 ]
 
-exception URL_missing_ID
+exception Ref_missing_ID
 
 let values_of_alias (alias:Lib_model.Alias.t) =
   let id = Lib_model.Url.(match alias.url with 
     | ID id
     | URL { id = Some id } -> ID.to_int id
-    | URL { id = None } -> raise URL_missing_ID
+    | URL url -> raise Ref_missing_ID
   ) in
 
   Lib_model.Alias.([|
@@ -109,6 +109,29 @@ let values_of_url url = Lib_model.Url.([|
   url.params |> maybe_string (Params.to_string) ;
   url.fragment |> maybe_string (Fragment.to_string);
 |])
+
+let use_fields = [
+  "alias"; "url"; "referrer"; "user_agent"; "ip";
+]
+
+let values_of_use (use:Lib_model.Use.t) = Lib_model.(
+  let alias_id = match Alias.id_of_ref use.alias with
+    | None -> raise Ref_missing_ID
+    | Some id -> Alias.ID.to_int id in
+  let get_url_id url = match Url.id_of_ref url with
+    | None -> raise Ref_missing_ID
+    | Some id -> Url.ID.to_int id in
+  let url_id = get_url_id use.url in
+  let referrer_id = Core.Option.map use.referrer (get_url_id) in
+
+  [|
+    `Int alias_id;
+    `Int url_id;
+    (match referrer_id with | None -> `Null | Some id -> `Int id);
+    use.user_agent |> maybe_string (Use.User_agent.to_string);
+    `String (Use.IP.to_string use.ip);
+  |]
+)
 
 let find_map_value row key =
    row |> Mdb.Row.StringMap.find key |> Mdb.Field.value

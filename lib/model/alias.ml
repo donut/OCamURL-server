@@ -24,3 +24,14 @@ type t = {
 }
 
 type or_id = Alias of t | ID of ID.t
+
+let of_ref = function
+  | `ID id -> ID id
+  | `Int id -> ID (ID.of_int id)
+  | `Rec r -> Alias r
+  | `Ref ref -> ref
+
+let id_of_ref = function
+  | ID id 
+  | Alias { id = Some id } -> Some id
+  | _ -> None

@@ -3,16 +3,14 @@
 open Lib_common
 open Lib_common.Ext_option
 
-module Scheme : sig
-  type t = HTTP | HTTPS
-  val of_string : string -> t
-  val to_string : t -> string
-end = struct
+module Scheme  = struct
   type t = HTTP | HTTPS
   exception No_matching_string of string
   let of_string s = match String.lowercase_ascii s with
     | "http" -> HTTP | "https" -> HTTPS
     | _ -> raise (No_matching_string s)
+  let of_string_opt s = 
+    try Some (of_string s) with _ -> None
   let to_string = function HTTP -> "http" | HTTPS -> "https"
 end
 
@@ -84,6 +82,17 @@ type t = {
 
 type or_id = URL of t | ID of ID.t
 
+let of_ref = function
+  | `ID id -> ID id
+  | `Int id -> ID (ID.of_int id)
+  | `Rec r -> URL r
+  | `Ref ref -> ref
+
+let id_of_ref = function
+  | ID id 
+  | URL { id = Some id } -> Some id
+  | _ -> None
+
 let to_string url =
   let opt_to_str maybe prefix to_string =
     (maybe, (^) prefix <% to_string) =!?: lazy "" in
@@ -101,3 +110,21 @@ let to_string url =
   let fragment = opt_to_str url.fragment "#" Fragment.to_string in
 
   scheme ^ "://" ^ auth ^ host ^ port ^ path ^ params ^ fragment
+
+
+let of_string url =
+  let module Opt = Core.Option in
+  let uri = Uri.of_string url in
+  let scheme = Scheme.of_string_opt (Uri.scheme uri =?: lazy "https")  
+    =?: lazy Scheme.HTTPS in
+  {
+    id = None;
+    scheme;
+    user = map (Uri.user uri) (Username.of_string);
+    password = map (Uri.password uri) (Password.of_string);
+    host = Host.of_string @@ Uri.host_with_default ~default:"" uri;
+    port = map (Uri.port uri) (Port.of_int);
+    path = Path.of_string @@ Uri.path uri;
+    params = map (Uri.verbatim_query uri) (Params.of_string);
+    fragment = map (Uri.fragment uri) (Fragment.of_string);
+  }

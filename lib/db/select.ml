@@ -49,7 +49,7 @@ let alias_of_row row = Alias.({
 })
 
 let alias_by_name db_conn name =
-  let fields = alias_fields |> String.concat ", " in
+  let fields = ("id" :: alias_fields) |> String.concat ", " in
   let query = "SELECT " ^ fields ^ " FROM alias "
             ^ "WHERE name = ? LIMIT 1" in
   execute_query db_conn query [| `String name |] (first_row_of_result)
@@ -59,7 +59,7 @@ let alias_by_name db_conn name =
 
 
 let aliases_of_url db_conn url_id =
-  let fields = alias_fields |> String.concat ", " in
+  let fields = ("id" :: alias_fields) |> String.concat ", " in
   let query = "SELECT " ^ fields ^ " FROM alias "
             ^  "WHERE url = ? ORDER BY name ASC" in
   let values = Alias.([| `Int url_id; |]) in
