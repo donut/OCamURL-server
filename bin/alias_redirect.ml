@@ -77,17 +77,25 @@ let alias_of_path path = String.(
 
 let router db_conn pathless_redirect_uri =
 Cohttp.(fun (ch, conn) (req:Request.t) body ->
-	ignore @@ Lwt_io.printf "Req: %s\n" req.resource;
-	ignore @@ Lwt_io.printf "%s\n" (req |> Request.headers |> Header.to_string);
+	let start = Unix.gettimeofday () in
+	ignore @@ Lwt_io.printlf "Req: %s\n" req.resource;
+	ignore @@ Lwt_io.printlf "%s\n" (req |> Request.headers |> Header.to_string);
 	let alias = Request.uri req |> Uri.path |> alias_of_path in
 	
 	match req.meth, alias with
+	begin match req.meth, alias with
 	| `GET, "" ->
 		(match pathless_redirect_uri with
 		| None -> not_found_response ()
 		| Some uri -> C.Server.respond_redirect ~uri:(Uri.of_string uri) ())
 	| `GET,  _ -> handle_get_alias db_conn ch (Request.headers req) alias
 	|    _,  _ -> C.Server.respond_string ~status:`Method_not_allowed ~body:"" ()
+	end >>= fun return ->
+
+	let time_taken = Unix.gettimeofday () -. start in
+	ignore @@ Lwt_io.printlf "Responded in %.8f seconds." time_taken;
+	
+	Lwt.return return
 )
 
 let main (conf:Conf.Alias_redirect.t) =
