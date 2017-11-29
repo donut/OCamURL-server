@@ -83,16 +83,16 @@ let alias_fields = [
 exception Ref_missing_ID
 
 let values_of_alias (alias:Lib_model.Alias.t) =
-  let id = Lib_model.Url.(match alias.url with 
-    | ID id
-    | URL { id = Some id } -> ID.to_int id
-    | URL url -> raise Ref_missing_ID
+  let id = Lib_model.(match alias.url with 
+    | Url.ID id
+    | Url.URL { id = Some id } -> Url.ID.to_int id
+    | Url.URL url -> raise Ref_missing_ID
   ) in
 
-  Lib_model.Alias.([|
-   `String (Name.to_string alias.name);
+  Lib_model.([|
+   `String (Alias.name alias);
    `Int id;
-   `String (Status.to_string alias.status);
+   `String (Alias.status_as_string alias);
   |])
 
 let url_fields = [

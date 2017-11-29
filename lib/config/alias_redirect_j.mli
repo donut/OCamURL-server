@@ -3,9 +3,16 @@
 
 type database = Database_t.t
 
+type cache = Alias_redirect_t.cache = {
+  max_record_age: float;
+  target_length: int;
+  trim_length: int
+}
+
 type t = Alias_redirect_t.t = {
   port: int;
   database: database;
+  cache: cache;
   pathless_redirect_uri: string option
 }
 
@@ -28,6 +35,26 @@ val read_database :
 val database_of_string :
   string -> database
   (** Deserialize JSON data of type {!database}. *)
+
+val write_cache :
+  Bi_outbuf.t -> cache -> unit
+  (** Output a JSON value of type {!cache}. *)
+
+val string_of_cache :
+  ?len:int -> cache -> string
+  (** Serialize a value of type {!cache}
+      into a JSON string.
+      @param len specifies the initial length
+                 of the buffer used internally.
+                 Default: 1024. *)
+
+val read_cache :
+  Yojson.Safe.lexer_state -> Lexing.lexbuf -> cache
+  (** Input JSON data of type {!cache}. *)
+
+val cache_of_string :
+  string -> cache
+  (** Deserialize JSON data of type {!cache}. *)
 
 val write_t :
   Bi_outbuf.t -> t -> unit

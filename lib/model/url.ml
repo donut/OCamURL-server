@@ -80,6 +80,8 @@ type t = {
   fragment: Fragment.t option;
 }
 
+let id t = Core.Option.map t.id ID.to_int
+
 type or_id = URL of t | ID of ID.t
 
 let of_ref = function

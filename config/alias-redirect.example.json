@@ -1,10 +1,20 @@
 {
-	"port": 8080,
+	"port": 8080, // Port to listen on.
 	"database": {
 		"host": "localhost",
 		"user": "root",
 		"pass": "",
 		"database": "example"
 	},
+	"cache": {
+		// Maximum life of a cache record before it considered invalid.
+		"max_record_age": 60.0,
+		// The number of records to allow in the cache before attempting trim it
+		// down.
+		"trim_length": 3000,
+		// Number of records to trim down to once `trim_length` is reached.
+		"target_length": 1500
+	},
+	// If a request is made without a path, where should it be redirected.
 	"pathless_redirect_uri": "https://www.example.com/this-is-optional"
 }

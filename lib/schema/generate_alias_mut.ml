@@ -124,17 +124,12 @@ let generate_name alphabet =
     |> String.split_on_char '.' |> List.rev |> String.concat ""
     |> int_of_string |> generate_name_from_int alphabet
 
-let insert_alias_with_unique_name db_conn alphabet url_or_id status =
+let insert_alias_with_unique_name db_conn alphabet url_or_id =
   let rec insert name =
     DB.Select.id_of_alias db_conn name >>= function
     | Some _ -> insert (generate_name alphabet)
     | None -> 
-      let alias = Model.Alias.({
-        id = None;
-        name = Name.of_string name;
-        url = url_or_id;
-        status = status;
-      }) in
+    let alias = Model.Alias.make ~name ~url:(`Ref url_or_id) () in
       DB.Insert.alias db_conn alias >>= fun () ->
       Lwt.return name
   in
@@ -148,8 +143,7 @@ DB.(Model.(Error.(
 
     let url' = { url with id = Some (Url.ID.of_int id) } in
     let url_or_id = (Url.URL url') in
-    let status = Alias.Status.Enabled in
-    insert_alias_with_unique_name db_conn alphabet url_or_id status
+    insert_alias_with_unique_name db_conn alphabet url_or_id
     >>= fun name ->
 
     let exception Missing_just_inserted_alias of string in

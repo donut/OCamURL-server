@@ -1,8 +1,10 @@
 
+open Core
 open Lwt.Infix
 open Printf
 
 module C = Cohttp_lwt_unix
+module Cache = Lib.Cache
 module Conf = Lib.Config
 module DB = Lib.DB
 module Model = Lib.Model
@@ -53,7 +55,18 @@ let record_use db_conn tcp_ch headers (alias:Model.Alias.t) =
 	(fun exn ->
 		Lwt_io.printlf "Failed recording use: %s" (Core.Exn.to_string exn))
 
-let handle_get_alias db_conn tcp_ch headers name =
+let handle_get_alias db_conn cache tcp_ch headers name =
+	match Cache.get cache name with
+	| Some payload -> 
+		let alias = Cache.Payload.(Model.Alias.make
+			~id:(alias_id payload) ~name ~url:(`Int (url_id payload)) ()) in
+		ignore @@ record_use db_conn tcp_ch headers alias;
+
+		let uri = Uri.of_string @@ Cache.Payload.url payload in
+		C.Server.respond_redirect ~uri ()
+
+	| None ->
+
 	DB.Select.alias_by_name db_conn name >>= function
 	| None | Some { status = Model.Alias.Status.Disabled } ->
 		not_found_response ~alias:name ()
@@ -64,31 +77,36 @@ let handle_get_alias db_conn tcp_ch headers name =
 	let alias' = { alias with url = Model.Url.URL url } in 
 	ignore @@ record_use db_conn tcp_ch headers alias';
 
-	let uri = Uri.of_string @@ Model.Url.to_string url in
+	let url' = Model.Url.to_string url in
+	let alias_id = Option.value_exn (Model.Alias.id alias') in
+	let url_id = Option.value_exn (Model.Url.id url) in
+	let payload = Cache.Payload.make ~alias_id ~url_id ~url:url' in
+	Cache.set cache name payload;
+
+	let uri = Uri.of_string url' in
 	C.Server.respond_redirect ~uri ()
 
-let alias_of_path path = String.(
-	if length path > 0 && path.[0] == '/' then
-		if length path == 1 then ""
-		else sub path 1 (length path - 1) 
+let alias_of_path path = 
+	let module S = Core.String in
+	if S.length path > 0 && phys_equal path.[0] '/' then
+		if phys_equal (S.length path) 1 then ""
+		else S.sub path 1 (S.length path - 1) 
 	else
 		path
-)
 
-let router db_conn pathless_redirect_uri =
+let router db_conn cache pathless_redirect_uri =
 Cohttp.(fun (ch, conn) (req:Request.t) body ->
 	let start = Unix.gettimeofday () in
 	ignore @@ Lwt_io.printlf "Req: %s\n" req.resource;
 	ignore @@ Lwt_io.printlf "%s\n" (req |> Request.headers |> Header.to_string);
 	let alias = Request.uri req |> Uri.path |> alias_of_path in
 	
-	match req.meth, alias with
 	begin match req.meth, alias with
 	| `GET, "" ->
 		(match pathless_redirect_uri with
 		| None -> not_found_response ()
 		| Some uri -> C.Server.respond_redirect ~uri:(Uri.of_string uri) ())
-	| `GET,  _ -> handle_get_alias db_conn ch (Request.headers req) alias
+	| `GET,  _ -> handle_get_alias db_conn cache ch (Request.headers req) alias
 	|    _,  _ -> C.Server.respond_string ~status:`Method_not_allowed ~body:"" ()
 	end >>= fun return ->
 
@@ -104,8 +122,13 @@ let main (conf:Conf.Alias_redirect.t) =
     ~host:db.host ~user:db.user ~pass:db.pass ~db:db.database ()
     >>= DB.or_die "connect" >>= fun db_conn ->
 
+	let cache = Cache.make
+		~max_record_age:conf.cache.max_record_age
+		~target_length:conf.cache.target_length
+		~trim_length:conf.cache.trim_length in
+
 	let mode = `TCP (`Port conf.port) in
-	let callback = router db_conn conf.pathless_redirect_uri in
+	let callback = router db_conn cache conf.pathless_redirect_uri in
 	let server = C.Server.make ~callback () in
 	C.Server.create ~mode server >>= fun () ->
 

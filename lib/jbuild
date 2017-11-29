@@ -2,4 +2,4 @@
 
 (library
  ((name lib)
-  (libraries (lib_common lib_config lib_db lib_model lib_schema))))
+  (libraries (lib_cache lib_common lib_config lib_db lib_model lib_schema))))

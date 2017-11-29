@@ -62,12 +62,7 @@ DB.(Model.(Error.(
 
     Insert.url_if_missing db_conn url >>= fun id ->
     let url' = { url with id = Some (Url.ID.of_int id); } in
-    let alias = Alias.({
-      id = None;
-      name = Name.of_string name;
-      url = Model.Url.URL url';
-      status = Status.Enabled;
-    }) in
+    let alias = Alias.make ~name ~url:(`Rec url') () in
     Insert.alias db_conn alias >>= fun () ->
 
     let exception Missing_just_inserted_alias of string in

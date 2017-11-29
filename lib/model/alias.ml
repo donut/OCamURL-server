@@ -35,3 +35,18 @@ let id_of_ref = function
   | ID id 
   | Alias { id = Some id } -> Some id
   | _ -> None
+
+let make ?id ~name ~url ?(status=Status.Enabled) () =
+  let module Opt = Core.Option in
+  {
+    id = Opt.map id ID.of_int;
+    name = Name.of_string name;
+    url = Url.of_ref url;
+    status = status;
+  }
+
+let id t = Core.Option.map t.id ID.to_int
+let name t = Name.to_string t.name
+let url t = t.url
+let status t = t.status
+let status_as_string t = Status.to_string t.status

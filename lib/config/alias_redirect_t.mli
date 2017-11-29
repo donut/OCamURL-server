@@ -3,8 +3,11 @@
 
 type database = Database_t.t
 
+type cache = { max_record_age: float; target_length: int; trim_length: int }
+
 type t = {
   port: int;
   database: database;
+  cache: cache;
   pathless_redirect_uri: string option
 }
