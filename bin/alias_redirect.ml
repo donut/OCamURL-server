@@ -88,11 +88,13 @@ let handle_get_alias db_conn cache tcp_ch headers name =
 
 let alias_of_path path = 
 	let module S = Core.String in
-	if S.length path > 0 && phys_equal path.[0] '/' then
-		if phys_equal (S.length path) 1 then ""
-		else S.sub path 1 (S.length path - 1) 
-	else
-		path
+	let path =
+		if S.length path > 0 && phys_equal path.[0] '/' then
+			if phys_equal (S.length path) 1 then ""
+			else S.sub path 1 (S.length path - 1) 
+		else
+			path in
+	Uri.pct_decode path
 
 let router db_conn cache pathless_redirect_uri =
 Cohttp.(fun (ch, conn) (req:Request.t) body ->
@@ -112,7 +114,7 @@ Cohttp.(fun (ch, conn) (req:Request.t) body ->
 
 	let time_taken = Unix.gettimeofday () -. start in
 	ignore @@ Lwt_io.printlf "Responded in %.8f seconds." time_taken;
-	
+
 	Lwt.return return
 )
 
