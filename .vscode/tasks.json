@@ -5,7 +5,7 @@
 			"label": "build",
 			"type": "shell",
 			"command":
-				"find . -iname '*.atd' -exec atdgen -t '{}' \\; -exec atdgen -v '{}' \\; -exec atdgen -j '{}' \\;; and jbuilder build bin/main.exe",
+				"find . -iname '*.atd' -exec atdgen -t '{}' \\; -exec atdgen -j '{}' \\;; and jbuilder build bin/main.exe",
 			"group": {
 				"kind": "build",
 				"isDefault": true

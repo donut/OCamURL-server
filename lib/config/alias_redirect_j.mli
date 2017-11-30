@@ -1,8 +1,6 @@
 (* Auto-generated from "alias_redirect.atd" *)
 
 
-type file = Alias_redirect_t.file
-
 type database = Database_t.t
 
 type cache = Alias_redirect_t.cache = {
@@ -16,29 +14,9 @@ type t = Alias_redirect_t.t = {
   database: database;
   cache: cache;
   pathless_redirect_uri: string option;
-  error_404_page_path: file option;
-  error_50x_page_path: file option
+  error_404_page_path: string option;
+  error_50x_page_path: string option
 }
-
-val write_file :
-  Bi_outbuf.t -> file -> unit
-  (** Output a JSON value of type {!file}. *)
-
-val string_of_file :
-  ?len:int -> file -> string
-  (** Serialize a value of type {!file}
-      into a JSON string.
-      @param len specifies the initial length
-                 of the buffer used internally.
-                 Default: 1024. *)
-
-val read_file :
-  Yojson.Safe.lexer_state -> Lexing.lexbuf -> file
-  (** Input JSON data of type {!file}. *)
-
-val file_of_string :
-  string -> file
-  (** Deserialize JSON data of type {!file}. *)
 
 val write_database :
   Bi_outbuf.t -> database -> unit
