@@ -33,3 +33,7 @@ setup.log
 # Project configs
 config/*.json
 !config/*.example.json
+
+# Misc.
+/logs/*
+/work/*
