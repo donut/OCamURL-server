@@ -1,5 +1,6 @@
 
 type database <ocaml from="Database" t="t"> = abstract
+type file = string <ocaml valid="Assert.is_file">
 
 type cache = {
 	max_record_age: float;
@@ -12,4 +13,6 @@ type t = {
 	database: database;
 	cache: cache;
 	?pathless_redirect_uri: string option;
+	?error_404_page_path: file option;
+	?error_50x_page_path: file option;
 }

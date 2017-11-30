@@ -16,5 +16,8 @@
 		"target_length": 1500
 	},
 	// If a request is made without a path, where should it be redirected.
-	"pathless_redirect_uri": "https://www.example.com/this-is-optional"
+	"pathless_redirect_uri": "https://www.example.com/this-is-optional",
+	// Optional files to serve when the server runs into 404 and 50x errors.
+	"error_404_page_path": "assets/404.html",
+	"error_50x_page_path": "assets/50x.html"
 }

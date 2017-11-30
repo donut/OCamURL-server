@@ -9,11 +9,14 @@ module Conf = Lib.Config
 module DB = Lib.DB
 module Model = Lib.Model
 
-let not_found_response ?(alias="") () = 
-	let body = match alias with
+let not_found_response ?(body=None) ?(alias="") () = 
+	let body = match body with
+	| Some b -> b
+	| None -> match alias with
 		| "" -> "Page not found."
 		| name -> sprintf "The alias [%s] does not exist." name in
-	C.Server.respond_string ~status:`Not_found ~body ()
+	let headers = Cohttp.Header.add_opt None "content-type" "text/html" in
+	C.Server.respond_string ~headers ~status:`Not_found ~body ()
 
 let url_by_alias db_conn (alias:Model.Alias.t) = Model.(Url.(
 	let exception Alias_missing_URL of string * int in
@@ -63,15 +66,15 @@ let handle_get_alias db_conn cache tcp_ch headers name =
 		ignore @@ record_use db_conn tcp_ch headers alias;
 
 		let uri = Uri.of_string @@ Cache.Payload.url payload in
-		C.Server.respond_redirect ~uri ()
+		Lwt.return_some @@ C.Server.respond_redirect ~uri ()
 
 	| None ->
 
 	DB.Select.alias_by_name db_conn name >>= function
 	| None | Some { status = Model.Alias.Status.Disabled } ->
-		not_found_response ~alias:name ()
-	| Some alias -> 
+		Lwt.return_none
 
+	| Some alias -> 
 	url_by_alias db_conn alias >>= fun url -> 
 
 	let alias' = { alias with url = Model.Url.URL url } in 
@@ -84,7 +87,7 @@ let handle_get_alias db_conn cache tcp_ch headers name =
 	Cache.set cache name payload;
 
 	let uri = Uri.of_string url' in
-	C.Server.respond_redirect ~uri ()
+	Lwt.return_some @@ C.Server.respond_redirect ~uri ()
 
 let alias_of_path path = 
 	let module S = Core.String in
@@ -96,7 +99,7 @@ let alias_of_path path =
 			path in
 	Uri.pct_decode path
 
-let router db_conn cache pathless_redirect_uri =
+let router ~db_connect ~cache ~pathless_redirect_uri ~page_404 ~page_50x =
 Cohttp.(fun (ch, conn) (req:Request.t) body ->
 	let start = Unix.gettimeofday () in
 	ignore @@ Lwt_io.printlf "Req: %s\n" req.resource;
@@ -108,8 +111,16 @@ Cohttp.(fun (ch, conn) (req:Request.t) body ->
 		(match pathless_redirect_uri with
 		| None -> not_found_response ()
 		| Some uri -> C.Server.respond_redirect ~uri:(Uri.of_string uri) ())
-	| `GET,  _ -> handle_get_alias db_conn cache ch (Request.headers req) alias
-	|    _,  _ -> C.Server.respond_string ~status:`Method_not_allowed ~body:"" ()
+
+	| `GET, _ ->
+		let headers = (Request.headers req) in
+		handle_get_alias db_connect cache ch headers alias >>= begin function
+		| Some response -> response
+		| None -> not_found_response ~body:page_404 ~alias ()
+		end
+
+	|  _, _ ->
+		C.Server.respond_string ~status:`Method_not_allowed ~body:"" ()
 	end >>= fun return ->
 
 	let time_taken = Unix.gettimeofday () -. start in
@@ -122,7 +133,7 @@ let main (conf:Conf.Alias_redirect.t) =
   let db = conf.database in
   DB.connect
     ~host:db.host ~user:db.user ~pass:db.pass ~db:db.database ()
-    >>= DB.or_die "connect" >>= fun db_conn ->
+    >>= DB.or_die "connect" >>= fun db_connect ->
 
 	let cache = Cache.make
 		~max_record_age:conf.cache.max_record_age
@@ -130,11 +141,15 @@ let main (conf:Conf.Alias_redirect.t) =
 		~trim_length:conf.cache.trim_length in
 
 	let mode = `TCP (`Port conf.port) in
-	let callback = router db_conn cache conf.pathless_redirect_uri in
+	let callback = router
+		~db_connect ~cache
+		~pathless_redirect_uri:conf.pathless_redirect_uri
+		~page_404:(Option.map conf.error_404_page_path In_channel.read_all)
+		~page_50x:(Option.map conf.error_50x_page_path In_channel.read_all) in
 	let server = C.Server.make ~callback () in
 	C.Server.create ~mode server >>= fun () ->
 
-  DB.close db_conn
+  DB.close db_connect
 
 let start (conf:Conf.Alias_redirect.t) =
 	Lwt_main.run @@ main conf
