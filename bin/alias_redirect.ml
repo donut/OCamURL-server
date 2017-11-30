@@ -28,7 +28,7 @@ let url_by_alias db_conn (alias:Model.Alias.t) = Model.(Url.(
 		| Some url -> Lwt.return url
 ))
 
-let record_use db_conn tcp_ch headers (alias:Model.Alias.t) =
+let record_use db_conn tcp_ch headers ip_header (alias:Model.Alias.t) =
 	let open Cohttp in 
 	let module Opt = Core.Option in 
 
@@ -42,9 +42,15 @@ let record_use db_conn tcp_ch headers (alias:Model.Alias.t) =
 
 	let user_agent = Header.get headers "user-agent" in
 
-	let ip = match Conduit_lwt_unix.endp_of_flow tcp_ch with
-	| `TCP (ip, _) -> ip |> Ipaddr.to_string
-	| _ -> "0.0.0.0" in
+	let get_client_ip () = 
+		match Conduit_lwt_unix.endp_of_flow tcp_ch with
+		| `TCP (ip, _) -> ip |> Ipaddr.to_string
+		| _ -> "0.0.0.0" in
+	let ip = match ip_header with
+		| None -> get_client_ip ()
+		| Some h -> match Header.get headers h with
+			| None -> get_client_ip ()
+			| Some ip -> ip in
 
 	let use = Model.Use.make
 		~alias:(`Rec alias)
@@ -58,12 +64,12 @@ let record_use db_conn tcp_ch headers (alias:Model.Alias.t) =
 	(fun exn ->
 		Lwt_io.printlf "Failed recording use: %s" (Core.Exn.to_string exn))
 
-let handle_get_alias db_conn cache tcp_ch headers name =
+let handle_get_alias db_conn cache record_use name =
 	match Cache.get cache name with
 	| Some payload -> 
 		let alias = Cache.Payload.(Model.Alias.make
 			~id:(alias_id payload) ~name ~url:(`Int (url_id payload)) ()) in
-		ignore @@ record_use db_conn tcp_ch headers alias;
+		ignore @@ record_use alias;
 
 		let uri = Uri.of_string @@ Cache.Payload.url payload in
 		Lwt.return_some @@ C.Server.respond_redirect ~uri ()
@@ -78,7 +84,7 @@ let handle_get_alias db_conn cache tcp_ch headers name =
 	url_by_alias db_conn alias >>= fun url -> 
 
 	let alias' = { alias with url = Model.Url.URL url } in 
-	ignore @@ record_use db_conn tcp_ch headers alias';
+	ignore @@ record_use alias';
 
 	let url' = Model.Url.to_string url in
 	let alias_id = Option.value_exn (Model.Alias.id alias') in
@@ -99,8 +105,9 @@ let alias_of_path path =
 			path in
 	Uri.pct_decode path
 
-let router ~db_connect ~cache ~pathless_redirect_uri ~page_404 ~page_50x =
-Cohttp.(fun (ch, conn) (req:Request.t) body ->
+let router ~db_connect ~cache
+           ~pathless_redirect_uri ~page_404 ~page_50x ~ip_header
+= Cohttp.(fun (ch, conn) (req:Request.t) body ->
 	Lwt.catch 
 	(fun () -> 
 		let start = Unix.gettimeofday () in
@@ -116,7 +123,8 @@ Cohttp.(fun (ch, conn) (req:Request.t) body ->
 
 		| `GET, _ ->
 			let headers = (Request.headers req) in
-			handle_get_alias db_connect cache ch headers alias >>= begin function
+			let record_use = record_use db_connect ch headers ip_header in
+			handle_get_alias db_connect cache (record_use) alias >>= begin function
 			| Some response -> response
 			| None -> not_found_response ~body:page_404 ~alias ()
 			end
@@ -155,7 +163,8 @@ let main (conf:Conf.Alias_redirect.t) =
 		~db_connect ~cache
 		~pathless_redirect_uri:conf.pathless_redirect_uri
 		~page_404:(Option.map conf.error_404_page_path In_channel.read_all)
-		~page_50x:(Option.map conf.error_50x_page_path In_channel.read_all) in
+		~page_50x:(Option.map conf.error_50x_page_path In_channel.read_all)
+		~ip_header:conf.ip_header in
 	let server = C.Server.make ~callback () in
 	C.Server.create ~mode server >>= fun () ->
 

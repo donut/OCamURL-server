@@ -15,7 +15,8 @@ type t = Alias_redirect_t.t = {
   cache: cache;
   pathless_redirect_uri: string option;
   error_404_page_path: string option;
-  error_50x_page_path: string option
+  error_50x_page_path: string option;
+  ip_header: string option
 }
 
 let write_database = (
@@ -416,6 +417,17 @@ let write_t : _ -> t -> _ = (
       )
         ob x;
     );
+    (match x.ip_header with None -> () | Some x ->
+      if !is_first then
+        is_first := false
+      else
+        Bi_outbuf.add_char ob ',';
+      Bi_outbuf.add_string ob "\"ip_header\":";
+      (
+        Yojson.Safe.write_string
+      )
+        ob x;
+    );
     Bi_outbuf.add_char ob '}';
 )
 let string_of_t ?(len = 1024) x =
@@ -432,6 +444,7 @@ let read_t = (
     let field_pathless_redirect_uri = ref (None) in
     let field_error_404_page_path = ref (None) in
     let field_error_50x_page_path = ref (None) in
+    let field_ip_header = ref (None) in
     let bits0 = ref 0 in
     try
       Yojson.Safe.read_space p lb;
@@ -461,6 +474,14 @@ let read_t = (
             | 8 -> (
                 if String.unsafe_get s pos = 'd' && String.unsafe_get s (pos+1) = 'a' && String.unsafe_get s (pos+2) = 't' && String.unsafe_get s (pos+3) = 'a' && String.unsafe_get s (pos+4) = 'b' && String.unsafe_get s (pos+5) = 'a' && String.unsafe_get s (pos+6) = 's' && String.unsafe_get s (pos+7) = 'e' then (
                   1
+                )
+                else (
+                  -1
+                )
+              )
+            | 9 -> (
+                if String.unsafe_get s pos = 'i' && String.unsafe_get s (pos+1) = 'p' && String.unsafe_get s (pos+2) = '_' && String.unsafe_get s (pos+3) = 'h' && String.unsafe_get s (pos+4) = 'e' && String.unsafe_get s (pos+5) = 'a' && String.unsafe_get s (pos+6) = 'd' && String.unsafe_get s (pos+7) = 'e' && String.unsafe_get s (pos+8) = 'r' then (
+                  6
                 )
                 else (
                   -1
@@ -560,6 +581,16 @@ let read_t = (
                 )
               );
             )
+          | 6 ->
+            if not (Yojson.Safe.read_null_if_possible p lb) then (
+              field_ip_header := (
+                Some (
+                  (
+                    Ag_oj_run.read_string
+                  ) p lb
+                )
+              );
+            )
           | _ -> (
               Yojson.Safe.skip_json p lb
             )
@@ -592,6 +623,14 @@ let read_t = (
               | 8 -> (
                   if String.unsafe_get s pos = 'd' && String.unsafe_get s (pos+1) = 'a' && String.unsafe_get s (pos+2) = 't' && String.unsafe_get s (pos+3) = 'a' && String.unsafe_get s (pos+4) = 'b' && String.unsafe_get s (pos+5) = 'a' && String.unsafe_get s (pos+6) = 's' && String.unsafe_get s (pos+7) = 'e' then (
                     1
+                  )
+                  else (
+                    -1
+                  )
+                )
+              | 9 -> (
+                  if String.unsafe_get s pos = 'i' && String.unsafe_get s (pos+1) = 'p' && String.unsafe_get s (pos+2) = '_' && String.unsafe_get s (pos+3) = 'h' && String.unsafe_get s (pos+4) = 'e' && String.unsafe_get s (pos+5) = 'a' && String.unsafe_get s (pos+6) = 'd' && String.unsafe_get s (pos+7) = 'e' && String.unsafe_get s (pos+8) = 'r' then (
+                    6
                   )
                   else (
                     -1
@@ -691,6 +730,16 @@ let read_t = (
                   )
                 );
               )
+            | 6 ->
+              if not (Yojson.Safe.read_null_if_possible p lb) then (
+                field_ip_header := (
+                  Some (
+                    (
+                      Ag_oj_run.read_string
+                    ) p lb
+                  )
+                );
+              )
             | _ -> (
                 Yojson.Safe.skip_json p lb
               )
@@ -707,6 +756,7 @@ let read_t = (
             pathless_redirect_uri = !field_pathless_redirect_uri;
             error_404_page_path = !field_error_404_page_path;
             error_50x_page_path = !field_error_50x_page_path;
+            ip_header = !field_ip_header;
           }
          : t)
       )

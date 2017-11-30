@@ -1,11 +1,13 @@
 {
 	"port": 8080, // Port to listen on.
+
 	"database": {
 		"host": "localhost",
 		"user": "root",
 		"pass": "",
 		"database": "example"
 	},
+
 	"cache": {
 		// Maximum life of a cache record before it considered invalid.
 		"max_record_age": 60.0,
@@ -15,9 +17,17 @@
 		// Number of records to trim down to once `trim_length` is reached.
 		"target_length": 1500
 	},
+
 	// If a request is made without a path, where should it be redirected.
+	// (optional)
 	"pathless_redirect_uri": "https://www.example.com/this-is-optional",
+
 	// Optional files to serve when the server runs into 404 and 50x errors.
 	"error_404_page_path": "assets/404.html",
-	"error_50x_page_path": "assets/50x.html"
+	"error_50x_page_path": "assets/50x.html",
+	
+	// For when the service is proxied and the IP is just of the reverse proxy
+	// server, look for the client's actual IP address in this HTTP header.
+	// (optional)
+	"ip_header": "X-Real-IP"
 }

@@ -15,7 +15,8 @@ type t = Alias_redirect_t.t = {
   cache: cache;
   pathless_redirect_uri: string option;
   error_404_page_path: string option;
-  error_50x_page_path: string option
+  error_50x_page_path: string option;
+  ip_header: string option
 }
 
 val write_database :
