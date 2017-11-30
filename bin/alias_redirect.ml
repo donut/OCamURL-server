@@ -101,32 +101,42 @@ let alias_of_path path =
 
 let router ~db_connect ~cache ~pathless_redirect_uri ~page_404 ~page_50x =
 Cohttp.(fun (ch, conn) (req:Request.t) body ->
-	let start = Unix.gettimeofday () in
-	ignore @@ Lwt_io.printlf "Req: %s\n" req.resource;
-	ignore @@ Lwt_io.printlf "%s\n" (req |> Request.headers |> Header.to_string);
-	let alias = Request.uri req |> Uri.path |> alias_of_path in
-	
-	begin match req.meth, alias with
-	| `GET, "" ->
-		(match pathless_redirect_uri with
-		| None -> not_found_response ()
-		| Some uri -> C.Server.respond_redirect ~uri:(Uri.of_string uri) ())
+	Lwt.catch 
+	(fun () -> 
+		let start = Unix.gettimeofday () in
+		ignore @@ Lwt_io.printlf "Req: %s\n" req.resource;
+		ignore @@ Lwt_io.printlf "%s\n" (req |> Request.headers |> Header.to_string);
+		let alias = Request.uri req |> Uri.path |> alias_of_path in
+		
+		begin match req.meth, alias with
+		| `GET, "" ->
+			(match pathless_redirect_uri with
+			| None -> not_found_response ()
+			| Some uri -> C.Server.respond_redirect ~uri:(Uri.of_string uri) ())
 
-	| `GET, _ ->
-		let headers = (Request.headers req) in
-		handle_get_alias db_connect cache ch headers alias >>= begin function
-		| Some response -> response
-		| None -> not_found_response ~body:page_404 ~alias ()
-		end
+		| `GET, _ ->
+			let headers = (Request.headers req) in
+			handle_get_alias db_connect cache ch headers alias >>= begin function
+			| Some response -> response
+			| None -> not_found_response ~body:page_404 ~alias ()
+			end
 
-	|  _, _ ->
-		C.Server.respond_string ~status:`Method_not_allowed ~body:"" ()
-	end >>= fun return ->
+		|  _, _ ->
+			C.Server.respond_string ~status:`Method_not_allowed ~body:"" ()
+		end >>= fun return ->
 
-	let time_taken = Unix.gettimeofday () -. start in
-	ignore @@ Lwt_io.printlf "Responded in %.8f seconds." time_taken;
+		let time_taken = Unix.gettimeofday () -. start in
+		ignore @@ Lwt_io.printlf "Responded in %.8f seconds." time_taken;
 
-	Lwt.return return
+		Lwt.return return
+	)
+	(fun exn -> 
+		match page_50x with
+		| None -> raise exn
+		| Some body ->
+			let headers = Cohttp.Header.add_opt None "content-type" "text/html" in
+			C.Server.respond_string ~headers ~status:`Internal_server_error ~body ()
+	)
 )
 
 let main (conf:Conf.Alias_redirect.t) =
