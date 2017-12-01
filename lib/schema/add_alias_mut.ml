@@ -63,13 +63,7 @@ DB.(Model.(Error.(
     Insert.url_if_missing db_conn url >>= fun id ->
     let url' = { url with id = Some (Url.ID.of_int id); } in
     let alias = Alias.make ~name ~url:(`Rec url') () in
-    Insert.alias db_conn alias >>= fun () ->
-
-    let exception Missing_just_inserted_alias of string in
-    Select.id_of_alias db_conn name >>= (function
-      | None -> raise (Missing_just_inserted_alias name)
-      | Some id -> Lwt.return id)
-    >>= fun id ->
+    Insert.alias db_conn alias >>= fun id ->
 
     let alias' = { alias with id = Some (Alias.ID.of_int id); } in 
     Lwt.return { 

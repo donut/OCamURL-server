@@ -28,7 +28,7 @@ let url_by_alias db_conn (alias:Model.Alias.t) = Model.(Url.(
 		| Some url -> Lwt.return url
 ))
 
-let record_use db_conn tcp_ch headers ip_header (alias:Model.Alias.t) =
+let record_use db_connect tcp_ch headers ip_header (alias:Model.Alias.t) =
 	let open Cohttp in 
 	let module Opt = Core.Option in 
 
@@ -36,7 +36,7 @@ let record_use db_conn tcp_ch headers ip_header (alias:Model.Alias.t) =
 		| None -> Lwt.return_none
 		| Some r -> 
 			let referrer = Model.Url.of_string r in
-			DB.Insert.url_if_missing db_conn referrer >>= fun id ->
+			DB.Insert.url_if_missing db_connect referrer >>= fun id ->
 			Lwt.return_some @@ `Int id
 	end >>= fun referrer_id ->
 
@@ -60,11 +60,12 @@ let record_use db_conn tcp_ch headers ip_header (alias:Model.Alias.t) =
 		~ip () in
 	
 	Lwt.catch
-	(fun () -> DB.Insert.use db_conn use >>= fun _ -> Lwt.return_unit)
+	(fun () ->
+		DB.Insert.use db_connect use >>= fun _ -> Lwt.return_unit)
 	(fun exn ->
 		Lwt_io.printlf "Failed recording use: %s" (Core.Exn.to_string exn))
 
-let handle_get_alias db_conn cache record_use name =
+let handle_get_alias db_connect cache record_use name =
 	match Cache.get cache name with
 	| Some payload -> 
 		let alias = Cache.Payload.(Model.Alias.make
@@ -76,12 +77,12 @@ let handle_get_alias db_conn cache record_use name =
 
 	| None ->
 
-	DB.Select.alias_by_name db_conn name >>= function
+	DB.Select.alias_by_name db_connect name >>= function
 	| None | Some { status = Model.Alias.Status.Disabled } ->
 		Lwt.return_none
 
 	| Some alias -> 
-	url_by_alias db_conn alias >>= fun url -> 
+	url_by_alias db_connect alias >>= fun url -> 
 
 	let alias' = { alias with url = Model.Url.URL url } in 
 	ignore @@ record_use alias';
@@ -149,9 +150,9 @@ let router ~db_connect ~cache
 
 let main (conf:Conf.Alias_redirect.t) =
   let db = conf.database in
-  DB.connect
+  let db_connect () = DB.connect
     ~host:db.host ~user:db.user ~pass:db.pass ~db:db.database ()
-    >>= DB.or_die "connect" >>= fun db_connect ->
+    >>= DB.or_die "connect" in
 
 	let cache = Cache.make
 		~max_record_age:conf.cache.max_record_age
@@ -168,7 +169,8 @@ let main (conf:Conf.Alias_redirect.t) =
 	let server = C.Server.make ~callback () in
 	C.Server.create ~mode server >>= fun () ->
 
-  DB.close db_connect
+  DB.final_close ();
+	Lwt.return_unit
 
 let start (conf:Conf.Alias_redirect.t) =
 	Lwt_main.run @@ main conf

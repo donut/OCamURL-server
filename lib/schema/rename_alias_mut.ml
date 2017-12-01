@@ -102,7 +102,7 @@ DB.(Model.(Error.(
 						url = alias.url;
 						status = Status.Enabled;
 					}) in 
-					Insert.alias db_conn alias' >>= fun () ->
+					Insert.alias db_conn alias' >>= fun _ ->
 					Lwt.return Disable_and_add
 		) >>= fun action_taken ->
 

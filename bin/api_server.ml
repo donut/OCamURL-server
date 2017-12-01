@@ -7,7 +7,7 @@ module Gql = Graphql_lwt
 module Schema = Lib.Schema
 
 
-let schema db_conn (config:Conf.API.t) = Gql.Schema.(Schema.(schema [
+let make_schema db_conn (config:Conf.API.t) = Gql.Schema.(Schema.(schema [
     Aliases_qry.field db_conn;
     Url_qry.field db_conn;
   ]
@@ -24,14 +24,15 @@ let schema db_conn (config:Conf.API.t) = Gql.Schema.(Schema.(schema [
 
 let main (config:Conf.API.t) =
   let db = config.database in
-  DB.connect
+  let db_connect () = DB.connect
     ~host:db.host ~user:db.user ~pass:db.pass ~db:db.database ()
-    >>= DB.or_die "connect" >>= fun db_conn ->
+    >>= DB.or_die "connect" in
+  let schema = make_schema db_connect config in
 
-  Gql.Server.start ~port:config.port ~ctx:(fun () -> ()) (schema db_conn config)
-  >>= fun () ->
+  Gql.Server.start ~port:config.port ~ctx:(fun () -> ()) schema >>= fun () ->
 
-  DB.close db_conn
+  DB.final_close ();
+  Lwt.return_unit
 
 let start (config:Conf.API.t) = 
   Lwt_main.run @@ main config

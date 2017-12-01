@@ -1,8 +1,5 @@
 ### Known Issues ###
 
-#### Commands out of sync ####
-Concurrent MariaDB queries will break with a "Commands out of sync" error. See [ocaml-mariadb issue #12](https://github.com/andrenth/ocaml-mariadb/issues/12).
-
 #### Parameter count mismatch ####
 In `Lib.Schema.Generate_alias_mut.insert_alias_with_unique_name` runs into
 an error when trying to insert a duplicate name:

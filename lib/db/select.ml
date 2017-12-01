@@ -7,9 +7,8 @@ open Util
 
 exception ID_not_int
 
-let first_row_of_result = function
-  | None -> Lwt.return_none
-  | Some res -> stream res >>= stream_next_opt >>= Lwt.return
+let first_row_of_result res =
+  stream res >>= stream_next_opt >>= Lwt.return
 
 let id_of_first_row result =
   let exception ID_not_int in
@@ -21,12 +20,12 @@ let id_of_first_row result =
     | _ -> Lwt.fail ID_not_int
 
 
-let id_of_alias db_conn name =
+let id_of_alias db_connect name =
   let query = "SELECT id FROM alias WHERE name = ? ORDER BY id ASC LIMIT 1" in
   let values = [| `String name |] in
-  execute_query db_conn query values id_of_first_row
+  connect_and_exec db_connect query values id_of_first_row
 
-let id_of_url connection url = 
+let id_of_url db_connect url = 
   let values = values_of_url url |> Array.to_list in
   let where = List.combine url_fields values
     |> List.map (function 
@@ -39,7 +38,7 @@ let id_of_url connection url =
   let query = 
     "SELECT id FROM url WHERE " ^ where ^ " ORDER BY id ASC LIMIT 1"
   in 
-  execute_query connection query (Array.of_list values') id_of_first_row
+  connect_and_exec db_connect query (Array.of_list values') id_of_first_row
 
 let alias_of_row row = Alias.({
   id = Some (int_of_map row "id" |> ID.of_int);
@@ -48,25 +47,24 @@ let alias_of_row row = Alias.({
   status = string_of_map row "status" |> Status.of_string;
 })
 
-let alias_by_name db_conn name =
+let alias_by_name db_connect name =
   let fields = ("id" :: alias_fields) |> String.concat ", " in
   let query = "SELECT " ^ fields ^ " FROM alias "
             ^ "WHERE name = ? LIMIT 1" in
-  execute_query db_conn query [| `String name |] (first_row_of_result)
+  connect_and_exec db_connect query [| `String name |] (first_row_of_result)
   >>= function
   | None -> Lwt.return_none
   | Some row -> Lwt.return_some (alias_of_row row)
 
 
-let aliases_of_url db_conn url_id =
+let aliases_of_url db_connect url_id =
   let fields = ("id" :: alias_fields) |> String.concat ", " in
   let query = "SELECT " ^ fields ^ " FROM alias "
             ^  "WHERE url = ? ORDER BY name ASC" in
   let values = Alias.([| `Int url_id; |]) in
 
-  execute_query db_conn query values (function
-  | None -> Lwt.return []
-  | Some result -> stream result >>= 
+  connect_and_exec db_connect query values (fun result ->
+    stream result >>= 
     Lwt_stream.map (alias_of_row) %> 
     Lwt_stream.to_list >>= 
     Lwt.return
@@ -89,13 +87,13 @@ let url_of_first_row result =
   | None -> Lwt.return_none
   | Some row -> Lwt.return_some @@ url_of_row row
 
-let url_by_id db_conn id =
+let url_by_id db_connect id =
   let fields = ("id" :: url_fields) |> String.concat ", " in
   let query = "SELECT " ^ fields ^ " FROM url WHERE id = ? "
             ^ "ORDER BY id ASC LIMIT 1" in
-  execute_query db_conn query [| `Int id |] url_of_first_row
+  connect_and_exec db_connect query [| `Int id |] url_of_first_row
 
-let url_of_alias db_conn name =
+let url_of_alias db_connect name =
   let fields = "id" :: url_fields in
   let select = fields
     |> List.map (fun f -> "url." ^ f ^ " AS " ^ f)
@@ -106,7 +104,7 @@ let url_of_alias db_conn name =
      ^ "WHERE alias.name = ? "
      ^ "ORDER BY url.id LIMIT 1" in
 
-  execute_query db_conn query [| `String name |] url_of_first_row
+  connect_and_exec db_connect query [| `String name |] url_of_first_row
 
 let count_of_first_row result =
   let exception Count_not_int in
@@ -117,8 +115,8 @@ let count_of_first_row result =
     | `Int count -> Lwt.return count
     | _ -> Lwt.fail Count_not_int
 
-let use_count_of_alias db_conn name =
+let use_count_of_alias db_connect name =
   let query = "SELECT COUNT(u.id) AS count FROM `use` AS u "
             ^ "JOIN alias ON alias.id = u.alias "
             ^ "WHERE alias.name = ?" in
-  execute_query db_conn query [| `String name |] count_of_first_row
+  connect_and_exec db_connect query [| `String name |] count_of_first_row

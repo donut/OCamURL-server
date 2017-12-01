@@ -130,8 +130,8 @@ let insert_alias_with_unique_name db_conn alphabet url_or_id =
     | Some _ -> insert (generate_name alphabet)
     | None -> 
     let alias = Model.Alias.make ~name ~url:(`Ref url_or_id) () in
-      DB.Insert.alias db_conn alias >>= fun () ->
-      Lwt.return name
+      DB.Insert.alias db_conn alias >>= fun id ->
+      Lwt.return Model.({ alias with id = Some (Alias.ID.of_int id) })
   in
   insert (generate_name alphabet) >>= Lwt.return
 
@@ -144,12 +144,6 @@ DB.(Model.(Error.(
     let url' = { url with id = Some (Url.ID.of_int id) } in
     let url_or_id = (Url.URL url') in
     insert_alias_with_unique_name db_conn alphabet url_or_id
-    >>= fun name ->
-
-    let exception Missing_just_inserted_alias of string in
-    Select.alias_by_name db_conn name >>= (function
-      | None -> raise (Missing_just_inserted_alias name)
-      | Some a -> Lwt.return a)
     >>= fun alias ->
 
     let payload = { alias; client_mutation_id; } in 
