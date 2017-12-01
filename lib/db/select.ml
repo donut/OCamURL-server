@@ -23,7 +23,7 @@ let id_of_first_row result =
 let id_of_alias db_connect name =
   let query = "SELECT id FROM alias WHERE name = ? ORDER BY id ASC LIMIT 1" in
   let values = [| `String name |] in
-  connect_and_exec db_connect query values id_of_first_row
+  execute db_connect query values id_of_first_row
 
 let id_of_url db_connect url = 
   let values = values_of_url url |> Array.to_list in
@@ -38,7 +38,7 @@ let id_of_url db_connect url =
   let query = 
     "SELECT id FROM url WHERE " ^ where ^ " ORDER BY id ASC LIMIT 1"
   in 
-  connect_and_exec db_connect query (Array.of_list values') id_of_first_row
+  execute db_connect query (Array.of_list values') id_of_first_row
 
 let alias_of_row row = Alias.({
   id = Some (int_of_map row "id" |> ID.of_int);
@@ -51,7 +51,7 @@ let alias_by_name db_connect name =
   let fields = ("id" :: alias_fields) |> String.concat ", " in
   let query = "SELECT " ^ fields ^ " FROM alias "
             ^ "WHERE name = ? LIMIT 1" in
-  connect_and_exec db_connect query [| `String name |] (first_row_of_result)
+  execute db_connect query [| `String name |] (first_row_of_result)
   >>= function
   | None -> Lwt.return_none
   | Some row -> Lwt.return_some (alias_of_row row)
@@ -63,7 +63,7 @@ let aliases_of_url db_connect url_id =
             ^  "WHERE url = ? ORDER BY name ASC" in
   let values = Alias.([| `Int url_id; |]) in
 
-  connect_and_exec db_connect query values (fun result ->
+  execute db_connect query values (fun result ->
     stream result >>= 
     Lwt_stream.map (alias_of_row) %> 
     Lwt_stream.to_list >>= 
@@ -91,7 +91,7 @@ let url_by_id db_connect id =
   let fields = ("id" :: url_fields) |> String.concat ", " in
   let query = "SELECT " ^ fields ^ " FROM url WHERE id = ? "
             ^ "ORDER BY id ASC LIMIT 1" in
-  connect_and_exec db_connect query [| `Int id |] url_of_first_row
+  execute db_connect query [| `Int id |] url_of_first_row
 
 let url_of_alias db_connect name =
   let fields = "id" :: url_fields in
@@ -104,7 +104,7 @@ let url_of_alias db_connect name =
      ^ "WHERE alias.name = ? "
      ^ "ORDER BY url.id LIMIT 1" in
 
-  connect_and_exec db_connect query [| `String name |] url_of_first_row
+  execute db_connect query [| `String name |] url_of_first_row
 
 let count_of_first_row result =
   let exception Count_not_int in
@@ -119,4 +119,4 @@ let use_count_of_alias db_connect name =
   let query = "SELECT COUNT(u.id) AS count FROM `use` AS u "
             ^ "JOIN alias ON alias.id = u.alias "
             ^ "WHERE alias.name = ?" in
-  connect_and_exec db_connect query [| `String name |] count_of_first_row
+  execute db_connect query [| `String name |] count_of_first_row

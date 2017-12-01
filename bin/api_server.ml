@@ -24,9 +24,8 @@ let make_schema db_conn (config:Conf.API.t) = Gql.Schema.(Schema.(schema [
 
 let main (config:Conf.API.t) =
   let db = config.database in
-  let db_connect () = DB.connect
-    ~host:db.host ~user:db.user ~pass:db.pass ~db:db.database ()
-    >>= DB.or_die "connect" in
+  let db_connect = DB.make_connect_func
+		~host:db.host ~user:db.user ~pass:db.pass ~db:db.database () in
   let schema = make_schema db_connect config in
 
   Gql.Server.start ~port:config.port ~ctx:(fun () -> ()) schema >>= fun () ->

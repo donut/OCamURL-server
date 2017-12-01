@@ -61,17 +61,18 @@ let stream_next_opt s =
       | Lwt_stream.Empty -> Lwt.return_none
       | exn -> Lwt.fail exn)
 
-let execute conn query values yield =
+let exec_with_conn conn query values yield =
   Mdb.prepare conn query >>= or_die "prepare" >>= fun stmt ->
   Mdb.Stmt.execute stmt values >>= or_die "exec" >>=
   yield >>= fun return -> 
   Mdb.Stmt.close stmt >>= or_die "stmt close" >>= fun () ->
   Lwt.return return
 
-let connect_and_exec db_connect query values yield = 
-  db_connect () >>= fun db_conn ->
-  execute db_conn query values yield >>= fun return ->
-  Mdb.close db_conn >>= fun () ->
+let execute handle query values yield =
+  Handle.get_raw_connection handle >>= fun db_conn ->
+  exec_with_conn db_conn query values yield >>= fun return ->
+  Handle.close_if_prev_not_connected
+    ~handle ~conn:(`Connection db_conn) >>= fun () ->
   Lwt.return return
 
 let maybe_string transform maybe = match maybe with

@@ -11,11 +11,11 @@ let get_last_insert_id db_conn query =
   | None -> raise (Last_inserted_ID_missing query)
   | Some id -> Lwt.return id)
 
-let exec_and_get_id db_connect query values =
-  db_connect () >>= fun conn ->
+let exec_and_get_id handle query values =
+  Handle.get_connection handle >>= fun conn ->
   execute conn query values lwt_unit >>= fun () ->
   get_last_insert_id conn query >>= fun id ->
-  Mdb.close conn >>= fun () ->
+  Handle.close_if_prev_not_connected ~handle ~conn >>= fun () ->
   Lwt.return id
 
 let single_row_query table field_list =
@@ -28,9 +28,9 @@ let alias db_connect alias' =
   let query = single_row_query "alias" alias_fields in
   exec_and_get_id db_connect query (values_of_alias alias')
 
-let url connection url' = 
+let url db_connect url' = 
   let query = single_row_query "url" url_fields in
-  exec_and_get_id connection query (values_of_url url')
+  exec_and_get_id db_connect query (values_of_url url')
 
 exception Just_inserted_URL_missing of string
 

@@ -150,10 +150,8 @@ let router ~db_connect ~cache
 
 let main (conf:Conf.Alias_redirect.t) =
   let db = conf.database in
-  let db_connect () = DB.connect
-    ~host:db.host ~user:db.user ~pass:db.pass ~db:db.database ()
-    >>= DB.or_die "connect" in
-
+  let db_connect = DB.make_connect_func
+		~host:db.host ~user:db.user ~pass:db.pass ~db:db.database () in
 	let cache = Cache.make
 		~max_record_age:conf.cache.max_record_age
 		~target_length:conf.cache.target_length
