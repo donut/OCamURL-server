@@ -6,6 +6,14 @@
 		"pass": "",
 		"database": "example"
 	},
+	// The alphabet to use when generating aliases. Changing this after 
+	// generating aliases could increase the risk of collisions.
 	"alias_alphabet":  
-		"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-~_."
+		"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-~_.",
+	// List Perl regular expression patterns to represent reserved names. Will
+	// be matched against potential alias names. If they match, the name will be
+	// rejected. Patterns are assumed case insensitive.
+	"reserved": [
+		"^admin(istrate)?/?$", "^api(/.*)?$", "/assets/"
+	]
 }

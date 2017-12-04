@@ -63,46 +63,41 @@ let payload_or_error db_conn = Error.make_x_or_error
   ~resolve_error:(fun () p -> p.error)
   ~resolve_x:(fun () p -> p.payload)
 
-let resolver db_conn () ()
+let resolver ~db_handle ~reserved () ()
 	{ name; new_name; disable_and_add_if_used; client_mutation_id; } =
-DB.(Model.(Error.(
   Lwt.catch
 	(fun () -> 
-    Select.alias_by_name db_conn name >>= function
-    | None ->
-      raise (E (Code.Bad_request,
-								sprintf "The alias [%s] does not exist." name))
+    DB.Select.alias_by_name db_handle name >>= function
+    | None -> raise
+      Error.(E (Code.Bad_request,
+                sprintf "The alias [%s] does not exist." name))
     | Some alias -> 
 
-		if new_name == name
-		then raise (E (Code.Bad_request,
-									 "`newName` must be different than the current name."))
+		if new_name = name
+		then raise Error.( E (Code.Bad_request,
+      "`newName` must be different than the current name."))
 		else
 
-		Select.id_of_alias db_conn new_name >>= function
-		| Some _ ->
-			raise (E (Code.Bad_request,
-								sprintf "The alias [%s] already exists." new_name))
-		| None ->
+    Alias.is_available_exn ~db_handle ~reserved new_name >>= fun () ->
 
-		Select.use_count_of_alias db_conn name >>= (function
+		DB.Select.use_count_of_alias db_handle name >>= (function
 			| 0 -> 
-				Update.alias_name db_conn name new_name >>= fun () ->
+				DB.Update.alias_name db_handle name new_name >>= fun () ->
 				Lwt.return Rename
 			| _ -> match disable_and_add_if_used with 
-				| false ->
-					raise (E (Code.Bad_request,
-									  sprintf "The alias [%s] has already been used so cannot be renamed. Pass `disableAndAddIfUsed: true` to disable the old alias and create a new one with the new name." name))
+				| false -> raise Error.(
+          E (Code.Bad_request,
+             sprintf "The alias [%s] has already been used so cannot be renamed. Pass `disableAndAddIfUsed: true` to disable the old alias and create a new one with the new name." name))
 				| true ->
-					Update.alias_status db_conn name Model.Alias.Status.Disabled
+					DB.Update.alias_status db_handle name Model.Alias.Status.Disabled
 					>>= fun () ->
-					let alias' = Model.Alias.({
-            id = None;
-						name = Name.of_string new_name;
-						url = alias.url;
-						status = Status.Enabled;
-					}) in 
-					Insert.alias db_conn alias' >>= fun _ ->
+          let alias' = Model.(Alias.make
+            ~name:new_name
+            ~url:(`Ref (Alias.url alias))
+            ~status:(Alias.status alias)
+            ()
+          ) in
+					DB.Insert.alias db_handle alias' >>= fun _ ->
 					Lwt.return Disable_and_add
 		) >>= fun action_taken ->
 
@@ -111,15 +106,13 @@ DB.(Model.(Error.(
 			payload = Some { action_taken; client_mutation_id; };
 		}
   )
-  (fun exn -> 
-    Lwt.return { error = Some (of_exn exn); payload = None; })
-  )
-))
+  (fun exn -> Error.(
+    Lwt.return { error = Some (of_exn exn); payload = None; }))
 
-let field db_conn = Schema.(io_field "renameAlias"
-  ~typ:(non_null (payload_or_error db_conn))
+let field ~db_handle ~reserved = Schema.(io_field "renameAlias"
+  ~typ:(non_null (payload_or_error db_handle))
   ~args:Arg.[
     arg "input" ~typ:(non_null input);
   ]
-  ~resolve:(resolver db_conn)
+  ~resolve:(resolver ~db_handle ~reserved)
 )

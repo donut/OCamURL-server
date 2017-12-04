@@ -3,7 +3,12 @@
 
 type database = Database_t.t
 
-type t = Api_t.t = { port: int; database: database; alias_alphabet: string }
+type t = Api_t.t = {
+  port: int;
+  database: database;
+  alias_alphabet: string;
+  reserved: string list
+}
 
 val write_database :
   Bi_outbuf.t -> database -> unit

@@ -51,7 +51,7 @@ let make ~max_record_age ~target_length ~trim_length = {
 }
 	
 let clear_expired t =
-	let test r = phys_equal (Record.is_expired r) false in
+	let test r = (Record.is_expired r) = false in
 	Hsh.filter_inplace t.table test
 
 let trim_to_target_length t =

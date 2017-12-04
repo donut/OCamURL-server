@@ -7,20 +7,25 @@ module Gql = Graphql_lwt
 module Schema = Lib.Schema
 
 
-let make_schema db_conn (config:Conf.API.t) = Gql.Schema.(Schema.(schema [
-    Aliases_qry.field db_conn;
-    Url_qry.field db_conn;
-  ]
-  ~mutations:[
-    Add_alias_mut.field db_conn;
-    Change_alias_url_mut.field db_conn;
-    Delete_alias_mut.field db_conn;
-    Disable_alias_mut.field db_conn;
-    Enable_alias_mut.field db_conn;
-    Generate_alias_mut.field db_conn config.alias_alphabet;
-    Rename_alias_mut.field db_conn;
-  ]
-))
+let make_schema db_handle (conf:Conf.API.t) =
+  let reserved = conf.reserved in
+
+  Gql.Schema.(Schema.(schema
+    [
+      Aliases_qry.field db_handle;
+      Url_qry.field db_handle;
+    ]
+    ~mutations:[
+      Add_alias_mut.field ~db_handle ~reserved;
+      Change_alias_url_mut.field db_handle;
+      Delete_alias_mut.field db_handle;
+      Disable_alias_mut.field db_handle;
+      Enable_alias_mut.field db_handle;
+      Generate_alias_mut.field
+        ~db_handle ~alphabet:conf.alias_alphabet ~reserved;
+      Rename_alias_mut.field ~db_handle ~reserved;
+    ]
+  ))
 
 let main (config:Conf.API.t) =
   let db = config.database in

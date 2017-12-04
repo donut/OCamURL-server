@@ -45,6 +45,9 @@ let make ?id ~name ~url ?(status=Status.Enabled) () =
     status = status;
   }
 
+let set_id t id' =
+  { t with id = Some (ID.of_int id') }
+
 let id t = Core.Option.map t.id ID.to_int
 let name t = Name.to_string t.name
 let url t = t.url

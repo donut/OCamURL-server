@@ -50,3 +50,19 @@ let alias db_conn = Graphql_lwt.Schema.(obj "Alias"
     ;
   ])
 )
+
+let is_available ~db_handle ~reserved name =
+  let patterns = List.map (Re_perl.compile_pat ~opts:[`Caseless]) reserved in
+  let test = fun p -> Re.execp p name in
+  match List.exists test patterns with
+  | true -> Lwt.return false
+  | false -> 
+    DB.Select.id_of_alias db_handle name >>= fun id -> 
+    Lwt.return @@ Core.Option.is_none id
+
+let is_available_exn ~db_handle ~reserved name =
+  is_available ~db_handle ~reserved name >>= function
+  | false -> raise Error.(
+    E (Code.Bad_request,
+       "The alias '" ^ name ^ "' already exists or is not allowed."))
+  | true -> Lwt.return_unit

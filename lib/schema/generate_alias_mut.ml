@@ -124,21 +124,21 @@ let generate_name alphabet =
     |> String.split_on_char '.' |> List.rev |> String.concat ""
     |> int_of_string |> generate_name_from_int alphabet
 
-let insert_alias_with_unique_name db_handle alphabet url_or_id =
+let insert_alias_with_unique_name ~db_handle ~alphabet ~reserved url_or_id =
   DB.get_connection db_handle >>= fun db_conn ->
   let rec insert name =
-    DB.Select.id_of_alias db_conn name >>= function
-    | Some _ -> insert (generate_name alphabet)
-    | None -> 
-    let alias = Model.Alias.make ~name ~url:(`Ref url_or_id) () in
+    Alias.is_available ~db_handle:db_conn ~reserved name >>= function
+    | false -> insert (generate_name alphabet)
+    | true -> 
+      let alias = Model.Alias.make ~name ~url:(`Ref url_or_id) () in
       DB.Insert.alias db_conn alias >>= fun id ->
-      Lwt.return Model.({ alias with id = Some (Alias.ID.of_int id) })
+      Lwt.return @@ Model.Alias.set_id alias id
   in
   insert (generate_name alphabet) >>= fun alias ->
   DB.close_if_prev_not_connected ~handle:db_handle ~conn:db_conn >>= fun () ->
   Lwt.return alias
 
-let resolver db_handle alphabet () () { url; client_mutation_id; } =
+let resolver ~db_handle ~alphabet ~reserved () () { url; client_mutation_id; } =
 DB.(Model.(Error.(
   Lwt.catch
   (fun () ->
@@ -146,7 +146,7 @@ DB.(Model.(Error.(
 
     let url' = { url with id = Some (Url.ID.of_int id) } in
     let url_or_id = (Url.URL url') in
-    insert_alias_with_unique_name db_handle alphabet url_or_id
+    insert_alias_with_unique_name ~db_handle ~alphabet ~reserved url_or_id
     >>= fun alias ->
 
     let payload = { alias; client_mutation_id; } in 
@@ -157,10 +157,10 @@ DB.(Model.(Error.(
   )
 )))
 
-let field db_handle alphabet = Schema.(io_field "generateAlias"
+let field ~db_handle ~alphabet ~reserved = Schema.(io_field "generateAlias"
   ~typ:(non_null (payload_or_error db_handle))
   ~args:Arg.[
     arg "input" ~typ:(non_null input);
   ]
-  ~resolve:(resolver db_handle alphabet)
+  ~resolve:(resolver ~db_handle ~alphabet ~reserved)
 )

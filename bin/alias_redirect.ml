@@ -99,8 +99,8 @@ let handle_get_alias db_connect cache record_use name =
 let alias_of_path path = 
 	let module S = Core.String in
 	let path =
-		if S.length path > 0 && phys_equal path.[0] '/' then
-			if phys_equal (S.length path) 1 then ""
+		if S.length path > 0 && path.[0] = '/' then
+			if (S.length path) = 1 then ""
 			else S.sub path 1 (S.length path - 1) 
 		else
 			path in
