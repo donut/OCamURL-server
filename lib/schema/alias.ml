@@ -6,8 +6,8 @@ module M = Lib_model
 module DB = Lib_db
 
 let status = Schema.(enum "AliasStatus" ~values:M.Alias.Status.([
-  enum_value "disabled" ~value:Disabled;
-  enum_value "enabled" ~value:Enabled;
+  enum_value "Disabled" ~value:Disabled;
+  enum_value "Enabled" ~value:Enabled;
 ]))
 
 let alias db_conn = Graphql_lwt.Schema.(obj "Alias"

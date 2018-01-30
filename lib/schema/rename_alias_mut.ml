@@ -38,8 +38,8 @@ let input = Schema.Arg.(obj "RenameAliasInput"
 )
 
 let action = Schema.(enum "RenameAliasAction" ~values:[
-	enum_value "RENAME" ~value:Rename;
-	enum_value "DISABLE_AND_ADD" ~value:Disable_and_add;
+	enum_value "Rename" ~value:Rename;
+	enum_value "DisableAndAdd" ~value:Disable_and_add;
 ])
 
 let payload db_conn = Schema.(obj "RenameAliasPayload"
