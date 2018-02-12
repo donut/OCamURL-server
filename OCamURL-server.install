@@ -1,0 +1,10 @@
+lib: [
+  "_build/install/default/lib/OCamURL/META" {"META"}
+  "_build/install/default/lib/OCamURL/opam" {"opam"}
+]
+bin: [
+  "_build/install/default/bin/main.exe" {"OCamURL-server"}
+]
+doc: [
+  "README.md"
+]
