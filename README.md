@@ -8,7 +8,7 @@ A URL shortener sever written in OCaml with a GraphQL API. Check out [the web cl
 
 This has been tested on macOS High Sierra and Ubuntu 16.04.
 
-### [ocaml-mariadb][]'s Dependencies ###
+### [`ocaml-mariadb`][ocaml-mariadb]'s Dependencies ###
 
 Follow [the offical instructions][mdb-deps]. For Ubuntu 16.04, I had to configure MariaDB's own repositories. The required libraries weren't avialable by default. Instructions for that are on the linked page.
 
@@ -42,7 +42,7 @@ The first command finds all the config definition files and transpiles them to O
 
 ### Database Setup ###
 
-Run [/db/schema.sql] on the database to add th required tables. Be sure to setup the database details in your config files (see examples in [/config/]).
+Run [/db/schema.sql] on the database to add the required tables. Be sure to setup the database details in your config files (see examples in [/config/]).
 
 ### Running ###
 
@@ -65,11 +65,11 @@ This was my first project in OCaml and so likely has a lot of room for improveme
 
 ### Code Deduplication ###
 
-There is basically no utilization of functors. The first place I'd start looking for to use them is the query and mutation modules (*_qry.ml and *.mut.ml files). There are likely other places as well, but nothing else major comes to mind as of writing.
+There is basically no utilization of functors. The first place I'd start looking  to use them is the query and mutation modules (*_qry.ml and *.mut.ml files). There are likely other places as well, but nothing else major comes to mind as of writing.
 
 ### GraphQL Error Handling ###
 
-The [GraphQL server library][] being used [does not have a good way to handle errors with data][graphql-errors-issue]. To get around this I [changed the schema][my-solution] to have results like `PayloadOrError` that are basically `{ error: Error, payload: SomePayload }`, completely sidestepping the usual GraphQL error pathway. With this its on the client handle this irregular method. There are probbably [better ways][better-solution] to handle it as it is, and I suspect that this library will come out with better error handling sooner than later. Whatever the case, there is a need for rework here.
+The [GraphQL server library][] being used [does not have a good way to handle errors with data][graphql-errors-issue]. To get around this I [changed the schema][my-solution] to have results like `PayloadOrError` that are basically `{ error: Error, payload: SomePayload }`, completely sidestepping the usual GraphQL error pathway. With this, it's on the client to handle this irregular method. There are probbably [better ways][better-solution] to handle it as it is, and I suspect that `ocaml-graphql-server` will come out with better error handling sooner than later. Whatever the case, there is a need for rework here.
 
 [GraphQL server library]: https://github.com/andreas/ocaml-graphql-server
 [graphql-errors-issue]: https://github.com/andreas/ocaml-graphql-server/issues/61
@@ -78,12 +78,12 @@ The [GraphQL server library][] being used [does not have a good way to handle er
 
 ### Compliation and Installation Setup ###
 
-The .install and .opam files need to be setup correctly. I haven't had time to look into how to set those up properly.
+The .install and .opam files need to be setup correctly.
 
 ## Known Issues ##
 
 ### Parameter count mismatch ###
-In `Lib.Schema.Generate_alias_mut.insert_alias_with_unique_name` runs into
+`Lib.Schema.Generate_alias_mut.insert_alias_with_unique_name` sometimes runs into
 an error when trying to insert a duplicate name:
   
 > Failure "exec: (0) parameter count mismatch"
