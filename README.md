@@ -4,6 +4,12 @@ A URL shortener sever written in OCaml with a GraphQL API. Check out [the web cl
 
 [ocurl-client]: https://github.com/rightthisminute/ocamurl-client
 
+## Why OCaml ##
+
+Throughout development and after release, a few have asked why I chose OCaml over ReasonML since both can be transpiled to JavaScript and the client is written in Reason. Some of it is practical: I learned about OCaml before Reason and even once I knew of Reason, I didn't know it could be compiled to a native binary until later. And at the point, I found that BuckleScript isn't compatible with OCaml > 4.02.3, but both `ocaml-mariadb` and `ocaml-garphql-server` require 4.05.0 or greater. 
+
+All of that said, I still prefer OCaml's syntax over Reason, and when it makes sense, I foresee continuing to use OCaml when I'm not planning on compiling to JS, and possibly even in those situations if I don't have a need for React.
+
 ## Installation & Setup ##
 
 This has been tested on macOS High Sierra and Ubuntu 16.04.
